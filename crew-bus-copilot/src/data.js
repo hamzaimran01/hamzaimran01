@@ -55,3 +55,27 @@ var RULES = {
   defaultDrive: 6,
   kmPerMin: 20 / 60   // assumed average apron speed 20 km/h
 };
+
+/* Public Frankfurt Airport facts (sources listed). Crew tasks and buses above remain synthetic. */
+var FRA_FACTS = {
+  items: [
+    { value: '61.6 M', label: 'passengers in 2024', note: '+3.7% on 2023' },
+    { value: '440,853', label: 'aircraft movements in 2024', note: 'about 1,200 a day' },
+    { value: '2.1 M t', label: 'cargo in 2024', note: '+6.2% on 2023' },
+    { value: '60+', label: 'gates in Terminal 1', note: 'Concourses A, B, C and Z' }
+  ],
+  brief: [
+    { value: '≈ 1,100', label: 'crew bus trips a day', note: 'from the project brief' },
+    { value: '€47 M', label: 'delay compensation, Q1 2025', note: 'Lufthansa Group, from the project brief' }
+  ],
+  sources: [
+    { label: 'Fraport traffic figures 2024', url: 'https://www.fraport.com/en/newsroom/press-releases/2025/traffic-figures/fraport-traffic-figures-2024--frankfurt-remains-the-leading-airp.html' },
+    { label: 'Fraport: airside and terminal operations', url: 'https://www.fraport.com/en/business-areas/operations/airside-and-terminal-operations.html' },
+    { label: 'Wikipedia: Frankfurt Airport', url: 'https://en.wikipedia.org/wiki/Frankfurt_Airport' }
+  ]
+};
+
+/* Product tour video chapters (seconds into tour.mp4) */
+var TOUR_CHAPTERS = [{"t": 0.0, "title": "Intro"}, {"t": 7.4, "title": "The problem"}, {"t": 14.4, "title": "Tasks"}, {"t": 20.3, "title": "Disruptions"}, {"t": 27.4, "title": "Plan"}, {"t": 34.4, "title": "Accept"}, {"t": 40.9, "title": "Live map"}, {"t": 49.4, "title": "Details"}, {"t": 55.8, "title": "Alerts"}, {"t": 66.7, "title": "Results"}, {"t": 73.6, "title": "Summary"}];
+
+export { SAMPLE_TASKS, SAMPLE_BUSES, LOCATIONS, DRIVE_MINUTES, RULES, FRA_FACTS, TOUR_CHAPTERS };
