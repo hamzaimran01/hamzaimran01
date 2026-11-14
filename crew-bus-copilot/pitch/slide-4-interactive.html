@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crew Bus Dispatch Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one 16:9-style pitch slide — steps on the left, a live dispatch console on the right, key point band below. Single light look (matches the deck). */
+:root {
+  --canvas: #eef1f6;
+  --paper: #ffffff;
+  --ink: #15233f;
+  --muted: #5d6779;
+  --line: #d9dfea;
+  --gold: #f2a900;
+  --gold-soft: #fff4d6;
+  --navy: #0c1a38;
+  --navy-2: #13264d;
+  --navy-line: #2a4170;
+  --on-navy: #e8eefb;
+  --on-navy-muted: #9fb0d3;
+  --ok: #2fbf71;
+  --bad: #ff6b6b;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--canvas); color: var(--ink); font: 15px/1.45 var(--font); padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.slide { max-width: 1280px; margin: 0 auto; background: var(--paper); border-radius: 6px; box-shadow: 0 8px 30px rgba(21, 35, 63, .12); padding: 34px 40px 22px; display: grid; gap: 18px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* header */
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: clamp(24px, 3vw, 34px); font-weight: 800; letter-spacing: -.02em; margin: 8px 0 0; text-wrap: balance; color: var(--ink); }
+.pill { max-width: 100%; display: inline-flex; align-items: center; gap: 10px; border: 1.5px solid var(--gold); border-radius: 6px; padding: 7px 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+.pill svg { width: 22px; height: 22px; color: var(--gold); }
+
+/* body grid */
+.body { display: grid; grid-template-columns: minmax(230px, 300px) minmax(0, 1fr); gap: 26px; align-items: start; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.step { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; padding: 10px 10px 10px 0; border-radius: 8px; cursor: pointer; border: 0; background: none; text-align: left; color: inherit; width: 100%; position: relative; }
+.step:hover .num { border-color: var(--gold); }
+.num { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; font-weight: 700; transition: background .25s, border-color .25s, color .25s, transform .25s; background: var(--paper); position: relative; z-index: 1; }
+.step:not(:last-child)::after { content: ""; position: absolute; left: 18px; top: 50px; bottom: -6px; width: 2px; background: var(--line); }
+.step h3 { margin: 6px 0 2px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.step p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.step.done .num { background: var(--ink); color: var(--paper); }
+.step.active .num { border-color: var(--gold); background: var(--gold); color: var(--ink); transform: scale(1.08); box-shadow: 0 0 0 6px var(--gold-soft); }
+.step.active h3 { color: #b07a00; }
+
+/* console */
+.console { background: var(--navy); color: var(--on-navy); border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(12, 26, 56, .25); min-width: 0; }
+.c-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--navy-line); flex-wrap: wrap; }
+.c-brand { font-weight: 800; letter-spacing: .12em; font-size: 12.5px; text-transform: uppercase; }
+.c-live { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--on-navy-muted); }
+.c-live i { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); animation: pulse 1.6s ease-in-out infinite; }
+.c-ctl { display: flex; gap: 8px; }
+.ghost { background: transparent; color: var(--on-navy); border: 1px solid var(--navy-line); border-radius: 6px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.ghost:hover { border-color: var(--on-navy-muted); }
+.cols { display: grid; grid-template-columns: 1fr 1.15fr 1fr; min-width: 0; }
+.col { padding: 14px 16px 16px; border-right: 1px solid var(--navy-line); display: flex; flex-direction: column; gap: 10px; min-width: 0; transition: background .3s; }
+.col:last-child { border-right: 0; }
+.col.focus { background: rgba(242, 169, 0, .06); box-shadow: inset 0 3px 0 var(--gold); }
+.col-h { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.field { display: grid; grid-template-columns: 62px 1fr; align-items: center; gap: 8px; font-size: 13px; color: var(--on-navy-muted); }
+.field input, .field select, .ov select { width: 100%; min-width: 0; background: var(--navy); color: var(--on-navy); border: 1px solid var(--navy-line); border-radius: 5px; padding: 7px 9px; font: 13px var(--font); }
+.field input:focus, .field select:focus, .ov select:focus { outline: none; border-color: var(--gold); }
+.btn { border-radius: 6px; padding: 9px 12px; font-weight: 700; font-size: 13px; cursor: pointer; border: 1px solid var(--on-navy); background: transparent; color: var(--on-navy); transition: transform .12s, background .2s, opacity .2s; }
+.btn:active { transform: scale(.97); }
+.btn:hover:not(:disabled) { background: rgba(255, 255, 255, .06); }
+.btn.gold { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+.btn.gold:hover:not(:disabled) { background: #ffbb1f; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.wide { width: 100%; margin-top: auto; }
+.err { font-size: 12.5px; color: var(--bad); min-height: 1em; }
+
+/* proposal */
+.route { background: var(--navy-2); border: 1px solid var(--navy-line); border-radius: 8px; padding: 10px 8px 6px; }
+.route svg { display: block; width: 100%; height: auto; }
+.r-line { stroke: var(--on-navy-muted); stroke-width: 2; stroke-dasharray: 5 6; fill: none; }
+.r-node { fill: none; stroke: var(--on-navy); stroke-width: 2.5; }
+.r-bus { transition: transform 1.2s cubic-bezier(.3, .8, .3, 1); }
+.r-bus circle { fill: var(--navy); stroke: var(--gold); stroke-width: 2.5; }
+.r-bus path, .r-bus rect { stroke: var(--gold); fill: none; stroke-width: 1.8; stroke-linecap: round; }
+.r-plane { fill: var(--on-navy); }
+.r-t { fill: var(--on-navy-muted); font: 11px var(--font); }
+.r-t.b { fill: var(--gold); font-weight: 700; }
+.kv { display: grid; grid-template-columns: 52px 1fr; gap: 6px 8px; align-items: center; font-size: 13px; }
+.kv dt { color: var(--on-navy-muted); }
+.kv dd { margin: 0; background: var(--navy); border: 1px solid var(--navy-line); border-radius: 5px; padding: 6px 9px; min-height: 31px; }
+.why { font-size: 12px; color: var(--on-navy-muted); }
+.conflict { display: flex; gap: 8px; align-items: flex-start; border: 1.5px solid var(--gold); border-radius: 6px; padding: 7px 9px; font-size: 12.5px; color: #ffd36b; background: rgba(242, 169, 0, .08); animation: shake .45s ease .2s; }
+.conflict svg { flex: 0 0 16px; height: 16px; margin-top: 1px; }
+.decide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+.thinking { display: flex; align-items: center; gap: 8px; color: var(--on-navy-muted); font-size: 13px; }
+.thinking i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: blink 1s infinite; }
+.thinking i:nth-child(2) { animation-delay: .15s; } .thinking i:nth-child(3) { animation-delay: .3s; }
+.empty { color: var(--on-navy-muted); font-size: 13px; border: 1px dashed var(--navy-line); border-radius: 8px; padding: 18px 12px; text-align: center; }
+.ov { border: 1px solid var(--gold); border-radius: 8px; padding: 10px; display: grid; gap: 8px; animation: rise .25s ease; }
+.ov h4 { margin: 0; font-size: 12.5px; color: var(--gold); letter-spacing: .06em; text-transform: uppercase; }
+.alt { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 6px; border-radius: 5px; cursor: pointer; }
+.alt:hover { background: rgba(255, 255, 255, .05); }
+.alt input { accent-color: var(--gold); }
+.alt small { color: var(--on-navy-muted); }
+
+/* dashboard */
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 13px; padding: 2px 0; }
+.row.new { animation: rise .35s ease; }
+.badge { border-radius: 5px; padding: 5px 10px; font-size: 12px; font-weight: 700; text-align: center; min-width: 96px; border: 1px solid var(--on-navy); }
+.badge.overridden { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+.badge.confirmed { background: var(--on-navy); color: var(--navy); }
+.badge.pending { background: transparent; color: var(--on-navy); }
+.badge.flag { border-color: var(--bad); color: var(--bad); }
+.log { border-top: 1px solid var(--navy-line); padding-top: 10px; margin-top: auto; display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+.log svg { flex: 0 0 22px; height: 22px; color: var(--gold); }
+.log small { color: var(--on-navy-muted); display: block; }
+.sent { font-size: 12px; color: var(--ok); min-height: 1em; }
+.count { display: inline-block; animation: pop .45s cubic-bezier(.2, .9, .3, 1.3); }
+
+/* key point & footer */
+.key { display: flex; align-items: center; gap: 22px; background: #eef1f8; border-radius: 6px; padding: 14px 18px; flex-wrap: wrap; }
+.key b.tag { background: var(--gold); color: var(--ink); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 7px 14px; border-radius: 4px; }
+.key p { margin: 0; font-size: 17px; font-weight: 500; flex: 1; min-width: 240px; }
+.note { font-size: 11.5px; color: var(--muted); margin: 0; }
+.foot { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; gap: 10px; }
+.hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+.hint kbd { font: 11px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; background: var(--canvas); }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+@media (max-width: 1040px) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step:not(:last-child)::after { display: none; }
+}
+@media (max-width: 820px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .col { border-right: 0; border-bottom: 1px solid var(--navy-line); }
+  .slide { padding: 22px 18px 16px; }
+}
+@media (max-width: 520px) {
+  .pill { white-space: normal; letter-spacing: .06em; }
+  .c-top { justify-content: flex-start; }
+  .field { grid-template-columns: 56px minmax(0, 1fr); }
+  body { padding-block: 0; }
+  .slide { border-radius: 0; box-shadow: none; }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .key p { font-size: 15px; }
+  .foot { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<main class="slide" aria-label="Team pitch slide 4">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Team pitch · Slide 4 of 8 · AI solution and prototype</div>
+      <h1>The app proposes, the dispatcher approves or overrides</h1>
+    </div>
+    <span class="pill">Human-in-the-loop · Synthetic data only
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M2 13l3-1 3 3 5-2-4-7 2-1 7 6 3-1c1 0 1.5 1.5 0 2L5 18l-3-5z"/></svg>
+    </span>
+  </header>
+
+  <section class="body">
+    <ol class="steps" id="steps">
+      <li><button class="step" data-step="1" id="s1"><span class="num">1</span><span><h3>Input</h3><p>Crew transport requests (flight, crew size, pickup time, stand) plus available buses and drivers</p></span></button></li>
+      <li><button class="step" data-step="2" id="s2"><span class="num">2</span><span><h3>AI proposes</h3><p>Matches a bus and driver to each pickup slot, updates the schedule, flags conflicts and exceptions</p></span></button></li>
+      <li><button class="step" data-step="3" id="s3"><span class="num">3</span><span><h3>Human decides</h3><p>Dispatcher approves, corrects wrong-slot proposals and handles urgent cases</p></span></button></li>
+      <li><button class="step" data-step="4" id="s4"><span class="num">4</span><span><h3>Output</h3><p>Confirmed assignment sent to the driver, status on the dashboard, proposal and override logged</p></span></button></li>
+    </ol>
+
+    <div>
+      <div class="console" role="application" aria-label="Crew bus dispatch console demo">
+        <div class="c-top">
+          <span class="c-brand">Luberhansa · Crew bus dispatch</span>
+          <span class="c-ctl">
+            <button class="ghost" id="playBtn" type="button">▶ Play demo</button>
+            <button class="ghost" id="resetBtn" type="button">Reset</button>
+          </span>
+          <span class="c-live"><i></i>Live · synthetic data</span>
+        </div>
+        <div class="cols">
+          <form class="col" id="colReq" autocomplete="off">
+            <div class="col-h">1 · Request</div>
+            <label class="field">Flight <input id="fFlight" value="LH 0000 (synthetic)" aria-label="Flight"></label>
+            <label class="field">Crew <input id="fCrew" type="number" min="1" max="40" value="12" aria-label="Crew size"></label>
+            <label class="field">Pickup <select id="fPickup" aria-label="Pickup time"></select></label>
+            <label class="field">To <select id="fStand" aria-label="Stand"></select></label>
+            <div class="err" id="reqErr" aria-live="polite"></div>
+            <button class="btn wide" id="createBtn" type="submit">Create request</button>
+          </form>
+
+          <div class="col" id="colProp" aria-live="polite">
+            <div class="col-h">2 · AI proposal</div>
+            <div id="propBody"></div>
+          </div>
+
+          <div class="col" id="colDash">
+            <div class="col-h">3 · Dashboard</div>
+            <div class="rows" id="rows"></div>
+            <div class="sent" id="sent" aria-live="polite"></div>
+            <div class="log">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></svg>
+              <div><b id="logCount"></b><small id="logReason"></small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Try it: change the crew size or pickup time, then <b>Create request</b>. Keys: <kbd>Enter</kbd> create · <kbd>A</kbd> approve · <kbd>O</kbd> override · <kbd>R</kbd> reset.</p>
+    </div>
+  </section>
+
+  <div class="key"><b class="tag">Key point</b><p>Four steps, one human decision; every proposal and override is logged. One user story shown live in five minutes, backup video ready.</p></div>
+  <p class="note">Prototype built by the team with Claude on synthetic data. The console above is an interactive demo of the same rules the app uses. Flight numbers, buses and drivers are synthetic; drivers appear only as IDs.</p>
+  <footer class="foot"><span>Applied AI for Business · Daniel Szabo · Team pitch · Lufthansa LEOS (crew bus dispatch)</span><span>4</span></footer>
+</main>
+
+<script>
+(function () {
+  // ---------- synthetic world (same driving times as the app) ----------
+  const DRIVE = { 'Crew centre': 0, 'Pier A': 3, 'Pier B': 4, 'Pier Z': 4, 'Apron V': 6, 'Apron F': 8, 'Bus depot': 7 };
+  const STANDS = [['B44', 'Pier B'], ['A26', 'Pier A'], ['Z52', 'Pier Z'], ['V107', 'Apron V'], ['F209', 'Apron F']];
+  const FLEET = [
+    { id: 'Bus 03', driver: 'D-03', seats: 20, at: 'Pier A', shift: [330, 840] },
+    { id: 'Bus 07', driver: 'D-07', seats: 20, at: 'Crew centre', shift: [240, 750] },
+    { id: 'Bus 09', driver: 'D-09', seats: 16, at: 'Apron V', shift: [240, 750] },
+    { id: 'Bus 11', driver: 'D-11', seats: 8, at: 'Crew centre', shift: [300, 810] },
+    { id: 'Bus 12', driver: 'D-12', seats: 20, at: 'Bus depot', shift: [330, 840] }
+  ];
+  const SLOT = 15;
+  const fmt = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  const toMin = (s) => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+
+  const start = () => ({
+    step: 1, phase: 'input', proposal: null, override: false, sent: '',
+    rows: [
+      { t: 320, bus: 'Bus 09', status: 'overridden' },
+      { t: 345, bus: 'Bus 07', status: 'pending' },
+      { t: 370, bus: 'Bus 03', status: 'confirmed' }
+    ],
+    overrides: [{ reason: 'bus double-booked' }]
+  });
+  let S = start(), playTok = 0;
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- form ----------
+  for (let m = 330; m <= 420; m += 5) $('fPickup').insertAdjacentHTML('beforeend', `<option value="${fmt(m)}"${m === 340 ? ' selected' : ''}>${fmt(m)} · crew centre</option>`);
+  STANDS.forEach(([s, area]) => $('fStand').insertAdjacentHTML('beforeend', `<option value="${s}">Stand ${s} · ${area}</option>`));
+
+  // ---------- AI proposal: closest bus with enough seats, free of confirmed runs; pending runs are flagged ----------
+  function propose(req) {
+    const s = toMin(req.pickup), e = s + SLOT;
+    const overlaps = (st) => S.rows.filter((r) => r.bus === st && r !== S.current && r.t < e && r.t + SLOT > s);
+    const cands = FLEET.map((b) => {
+      const clash = overlaps(b.id);
+      const hard = clash.some((r) => r.status !== 'pending');
+      const soft = clash.filter((r) => r.status === 'pending');
+      const okSeats = b.seats >= req.crew, onShift = s >= b.shift[0] && e <= b.shift[1];
+      const empty = DRIVE[b.at];
+      return { ...b, empty, soft, ok: okSeats && onShift && !hard, why: !okSeats ? b.seats + ' seats' : !onShift ? 'off shift' : hard ? 'already booked' : '', score: empty + (soft.length ? 2 : 0) };
+    });
+    const ok = cands.filter((c) => c.ok).sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
+    if (!ok.length) return null;
+    const best = ok[0];
+    return { ...best, s, e, alts: ok.slice(1).concat(cands.filter((c) => !c.ok)), conflict: best.soft[0] || null };
+  }
+
+  function create(ev) {
+    if (ev) ev.preventDefault();
+    const req = { flight: $('fFlight').value.trim() || 'LH 0000', crew: +$('fCrew').value, pickup: $('fPickup').value, stand: $('fStand').value };
+    if (!req.crew || req.crew < 1) { $('reqErr').textContent = 'Enter the crew size.'; return; }
+    if (req.crew > 20) { $('reqErr').textContent = 'No single bus has ' + req.crew + ' seats. Split the crew into two requests.'; return; }
+    $('reqErr').textContent = '';
+    S.req = req; S.final = null; S.phase = 'thinking'; S.step = 2; S.override = false; S.sent = '';
+    if (S.current && S.current.status === 'pending') S.rows = S.rows.filter((r) => r !== S.current);
+    S.current = null;
+    render();
+    const tok = ++playTok;
+    setTimeout(() => {
+      if (tok !== playTok && !S.playing) return;
+      S.proposal = propose(req);
+      if (!S.proposal) { S.phase = 'input'; S.step = 1; $('reqErr').textContent = 'No bus is free with ' + req.crew + ' seats at ' + req.pickup + '.'; render(); return; }
+      S.current = { t: S.proposal.s, bus: S.proposal.id, status: 'pending', isNew: true };
+      S.rows.push(S.current); S.rows.sort((a, b) => a.t - b.t);
+      S.phase = 'proposal'; S.step = 3; render();
+    }, 900);
+  }
+
+  function decide(kind, alt, reason) {
+    if (S.phase !== 'proposal') return;
+    const p = S.proposal, req = S.req;
+    const bus = kind === 'override' ? FLEET.find((b) => b.id === alt) : p;
+    S.current.bus = bus.id; S.current.status = kind === 'override' ? 'overridden' : 'confirmed'; S.current.flag = kind === 'approve' && !!p.conflict;
+    if (kind === 'override') { S.overrides.push({ reason }); S.final = { ...bus, empty: DRIVE[bus.at], from: p.id, reason }; } else S.final = null;
+    S.sent = '✓ Sent to driver ' + bus.driver + ': ' + fmt(p.s) + ' crew centre → Stand ' + req.stand + ' (' + req.crew + ' crew, ' + req.flight + ')' + (S.current.flag ? ' · conflict logged for review' : '');
+    S.phase = 'done'; S.step = 4; S.override = false; S.bump = true;
+    render();
+  }
+
+  // ---------- render ----------
+  const ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>';
+  function route(p, req) {
+    const moved = S.phase === 'proposal' || S.phase === 'done';
+    return `<div class="route"><svg viewBox="0 0 260 74" role="img" aria-label="Route from crew centre to stand ${req.stand}">
+      <path class="r-line" d="M28 30 H222"/>
+      <circle class="r-node" cx="22" cy="30" r="9"/>
+      <g class="r-bus" style="transform: translateX(${moved ? 108 : 0}px)"><circle cx="22" cy="30" r="15"/><rect x="14" y="22" width="16" height="12" rx="2.5"/><path d="M14 28h16M17 36v1M27 36v1"/></g>
+      <path class="r-plane" d="M222 30l14-4 4-9 3 1-2 9 10-1 3-3 2 1-2 5 2 5-2 1-3-3-10-1 2 9-3 1-4-9z"/>
+      <text class="r-t" x="6" y="64">Crew centre</text><text class="r-t b" x="${moved ? 112 : 14}" y="64">${p.id}</text><text class="r-t" x="206" y="64">Stand ${req.stand}</text>
+    </svg></div>`;
+  }
+  function render() {
+    for (let i = 1; i <= 4; i++) { const el = $('s' + i); el.classList.toggle('active', S.step === i); el.classList.toggle('done', S.step > i); el.setAttribute('aria-current', S.step === i ? 'step' : 'false'); }
+    $('colReq').classList.toggle('focus', S.step === 1);
+    $('colProp').classList.toggle('focus', S.step === 2 || S.step === 3);
+    $('colDash').classList.toggle('focus', S.step === 4);
+
+    const pb = $('propBody');
+    if (S.phase === 'input' || !S.req) pb.innerHTML = '<div class="empty">Fill in the request and press <b>Create request</b>. The AI proposes a bus and driver in about a second.</div>';
+    else if (S.phase === 'thinking') pb.innerHTML = '<div class="thinking"><i></i><i></i><i></i> Matching buses and drivers to the ' + S.req.pickup + ' slot…</div>';
+    else {
+      const req = S.req, ov = S.phase === 'done' && S.final;
+      const p = ov ? { ...S.proposal, ...S.final, conflict: null } : S.proposal;
+      const area = STANDS.find(([s]) => s === req.stand)[1];
+      let h = route(p, req) +
+        `<dl class="kv"><dt>Bus</dt><dd>${p.id} · ${p.seats} seats</dd><dt>Driver</dt><dd>${p.driver} · on shift</dd><dt>Slot</dt><dd class="mono">${fmt(p.s)} → ${fmt(p.e)}</dd></dl>` +
+        (ov ? `<div class="why" style="color:var(--gold)">Dispatcher override: ${p.from} → ${p.id}. Reason: ${p.reason}.</div>` : `<div class="why">Why: closest bus with enough seats (${p.empty} min empty drive to the crew centre, then ${DRIVE[area]} min to ${area}).</div>`);
+      if (p.conflict) h += `<div class="conflict">${ICON_WARN}<span>Conflict: ${p.id} also on ${fmt(p.conflict.t)} run (pending)</span></div>`;
+      if (S.override) {
+        const alts = p.alts;
+        h += `<div class="ov"><h4>Override: pick another bus</h4>` +
+          alts.map((a, i) => `<label class="alt"><input type="radio" name="alt" value="${a.id}" ${a.ok ? '' : 'disabled'} ${i === 0 && a.ok ? 'checked' : ''}> ${a.id} · ${a.driver} <small>${a.ok ? a.empty + ' min empty' + (a.soft.length ? ', pending run' : '') : a.why}</small></label>`).join('') +
+          `<label class="field">Reason <select id="ovReason"><option>bus double-booked</option><option>closer bus available</option><option>crew size changed</option><option>driver break</option><option>urgent case</option></select></label>` +
+          `<div class="decide"><button class="btn" type="button" id="ovCancel">Cancel</button><button class="btn gold" type="button" id="ovConfirm">Confirm override</button></div></div>`;
+      } else if (S.phase === 'proposal') {
+        h += `<div class="decide"><button class="btn" type="button" id="approveBtn">Approve</button><button class="btn gold" type="button" id="overrideBtn">Override</button></div>`;
+      } else {
+        h += `<div class="decide"><button class="btn" type="button" disabled>${S.current.status === 'overridden' ? 'Overridden' : 'Approved'}</button><button class="btn gold" type="button" id="againBtn">New request</button></div>`;
+      }
+      pb.innerHTML = h;
+    }
+
+    $('rows').innerHTML = S.rows.map((r) => `<div class="row${r.isNew && r === S.current ? ' new' : ''}"><span class="mono">${fmt(r.t)}</span><span>${r.bus}${r === S.current ? ' <small style="color:var(--gold)">· new</small>' : ''}</span><span class="badge ${r.status}${r.flag ? ' flag' : ''}">${r.status === 'overridden' ? 'Overridden' : r.status === 'confirmed' ? (r.flag ? 'Confirmed ⚠' : 'Confirmed') : 'Pending'}</span></div>`).join('');
+    const n = S.overrides.length;
+    $('logCount').innerHTML = `<span class="${S.bump ? 'count' : ''}">${n}</span> override${n === 1 ? '' : 's'} logged today`;
+    $('logReason').textContent = 'last reason: ' + S.overrides[n - 1].reason;
+    $('sent').textContent = S.sent;
+    S.bump = false;
+  }
+
+  // ---------- events ----------
+  $('colReq').addEventListener('submit', create);
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.id === 'approveBtn') decide('approve');
+    if (t.id === 'overrideBtn') { S.override = true; render(); }
+    if (t.id === 'ovCancel') { S.override = false; render(); }
+    if (t.id === 'ovConfirm') { const c = document.querySelector('input[name=alt]:checked'); if (c) decide('override', c.value, $('ovReason').value); }
+    if (t.id === 'againBtn') { S.phase = 'input'; S.step = 1; S.current = null; S.proposal = null; S.sent = ''; render(); $('fCrew').focus(); }
+    if (t.id === 'resetBtn') reset();
+    if (t.id === 'playBtn') play();
+    if (t.dataset.step) jump(+t.dataset.step);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'a' && S.phase === 'proposal' && !S.override) decide('approve');
+    if (k === 'o' && S.phase === 'proposal') { S.override = true; render(); }
+    if (k === 'r') reset();
+    if (k === 'enter' && (S.phase === 'input' || S.phase === 'done')) create();
+  });
+  function jump(n) {
+    if (n === 1) { $('fCrew').focus(); }
+    if (n === 2 || n === 3) { if (S.phase === 'input' || S.phase === 'done') create(); }
+    if (n === 4 && S.phase === 'proposal') decide('approve');
+  }
+  function reset() { playTok++; S = start(); $('fCrew').value = 12; $('fPickup').value = '05:40'; $('fStand').value = 'B44'; $('fFlight').value = 'LH 0000 (synthetic)'; $('reqErr').textContent = ''; render(); }
+
+  // ---------- presenter autoplay ----------
+  const wait = (ms, tok) => new Promise((res, rej) => setTimeout(() => (tok === playTok ? res() : rej()), ms));
+  async function play() {
+    reset(); const tok = ++playTok; S.playing = true;
+    try {
+      await wait(900, tok); create(); playTok = tok;
+      await wait(2600, tok); S.override = true; render();
+      await wait(1800, tok); const r = $('ovReason'); if (r) r.value = 'bus double-booked';
+      await wait(900, tok); const c = document.querySelector('input[name=alt]:checked'); decide('override', c ? c.value : 'Bus 03', 'bus double-booked');
+    } catch (e) { /* stopped */ }
+    S.playing = false;
+  }
+
+  render();
+})();
+</script>
+
+</body>
+</html>
