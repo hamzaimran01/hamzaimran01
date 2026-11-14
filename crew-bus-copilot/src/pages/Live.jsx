@@ -3,7 +3,7 @@ import { AnchorButton, Button, Callout, Card, Classes, CompoundTag, HTMLTable, I
 import { useApp } from '../App.jsx';
 import { FraMap } from '../map.js';
 import { busNow, busOf, fmt, fmtSec, ids, inMin, RULES, shortLoc, statusOf, taskNow, taskOf, tids, why } from '../logic.js';
-import { BusChip, BusStateTag, DirTag, PageIntro, TaskStateTag } from '../ui.jsx';
+import { BusChip, BusStateTag, DirTag, DriverAvatar, PageIntro, TaskStateTag } from '../ui.jsx';
 import { Timeline } from './Plan.jsx';
 
 const STORE = 'crewBusCopilot.v1';
@@ -194,6 +194,52 @@ function Inspector({ p, t }) {
   return null;
 }
 
+
+/* ---------- drivers on duty (pseudonymous avatars) ---------- */
+function DutyRoster({ p, t, selBus }) {
+  const { S, select } = useApp();
+  const rows = p.buses.map((b) => {
+    const src = busOf(S, b.id), st = busNow(S, b, t);
+    const out = src.outFrom === 0 || (src.outFrom != null && t >= src.outFrom);
+    const onShift = t >= src.shiftStart && t < src.shiftEnd;
+    return { b, src, st, group: out ? 'out' : onShift ? 'on' : 'off' };
+  });
+  const groups = [['on', 'On duty'], ['off', 'Not on shift now'], ['out', 'Bus out of service']];
+  const onCount = rows.filter((r) => r.group === 'on').length;
+  return (
+    <Section elevation={1} className="sec roster" icon="people" title={'Drivers on duty (' + onCount + ' of ' + rows.length + ')'}
+      subtitle="Pseudonymous driver IDs with their bus and what it is doing now. Planning use only, no performance monitoring of drivers."
+      collapsible defaultIsOpen>
+      <SectionCard>
+        <div className="roster-groups">
+          {groups.map(([g, label]) => {
+            const list = rows.filter((r) => r.group === g);
+            if (!list.length) return null;
+            return (
+              <div key={g} className="roster-group">
+                <div className={Classes.TEXT_MUTED + ' roster-label'}>{label} · {list.length}</div>
+                <div className="roster-list">
+                  {list.map(({ b, src, st }) => (
+                    <div key={b.id} className={'roster-item' + (selBus === b.id ? ' is-sel' : '')}>
+                      <DriverAvatar driver={b.driver} status={g === 'out' ? 'out' : st.kind} selected={selBus === b.id} dim={g !== 'on'}
+                        onClick={() => select('bus', b.id)}
+                        title={b.driver + ' · bus ' + b.id + ' · shift ' + src.shift + ' · ' + st.label + (st.what ? ': ' + st.what : '')} />
+                      <div className="roster-meta">
+                        <div><b className={Classes.MONOSPACE_TEXT}>{b.driver}</b> <span className={Classes.TEXT_MUTED}>· {b.id}</span></div>
+                        <BusStateTag kind={g === 'out' ? 'out' : st.kind} label={g === 'out' ? 'Out of service' : st.label} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </SectionCard>
+    </Section>
+  );
+}
+
 /* ---------- page ---------- */
 export default function LivePage() {
   const { S, plan, live, setLive, liveT: t, livePlan: p, range, sel, select, setView } = useApp();
@@ -244,6 +290,8 @@ export default function LivePage() {
           <CompoundTag key={k} leftContent={l} intent={k === 'late' ? Intent.DANGER : k === 'done' ? Intent.SUCCESS : k === 'boarding' ? Intent.WARNING : k === 'planned' ? Intent.NONE : Intent.PRIMARY} minimal={k !== 'late' || !counts[k]} round>{counts[k]}</CompoundTag>
         ))}
       </div>
+
+      <DutyRoster p={p} t={t} selBus={selBus} />
 
       <div className="lv-grid">
         <Section elevation={1} className="map-card" icon={live.view === 'cam' ? 'video' : 'map'}

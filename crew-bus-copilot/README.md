@@ -23,6 +23,7 @@ Source: `src/main.jsx` (entry), `src/App.jsx` (shell, alerts, command bar, dialo
 1. **Tasks**: every crew that needs a bus. Report a disruption in plain words, for example `LH400 delayed 30 min`, `B03 broke down`, `B05 out of service from 06:30`, `B03 back in service`, `add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45`, `cancel LH1500`, `undo` or `reset`.
 2. **Plan**: a timeline per bus. Each assignment has a one-line "why" and **Accept** / **Overrule** buttons. Overrule shows what each alternative bus would do to the whole plan.
 3. **Live map**: a drawn, schematic map of Frankfurt Airport (runways, Terminal 1 with concourses A/B/C/Z, Terminal 2, the 7 locations). Buses move along their routes in sync with a replay clock (play/pause, 1× / 10× / 60×, slider) or the real clock. Next to the map:
+   - a **Drivers on duty** roster: pseudonymous avatars (D-01 …, coloured badge with the ID, no photos or names) grouped as on duty, not on shift, or bus out of service. Each avatar shows the bus and its current activity, and clicking it selects that bus
    - an inspector panel for the selected bus, crew task, flight or place
    - layer toggles: airport, routes, labels, waiting crews
    - a timeline row per bus and driver, and a live status table for every crew task
@@ -31,7 +32,7 @@ Source: `src/main.jsx` (entry), `src/App.jsx` (shell, alerts, command bar, dialo
 4. **Results**: today's dispatching (the `dispatcher_bus` column) next to the copilot on the same day, with a plain-language headline and public Frankfurt Airport figures (sources cited).
 
 ## Product tour
-- **Video guide** (`tour.mp4`, 81 s, with chapters): opens from the **Tour** button in the header or the welcome sheet. It is a pitch-style, step-by-step walkthrough: the problem, tasks, a typed disruption, explained proposals, accepting, the live map, details, alerts, results.
+- **Video guide** (`tour.mp4`, 88 s, with chapters): opens from the **Tour** button in the header or the welcome sheet. It is a pitch-style, step-by-step walkthrough: the problem, tasks, a typed disruption, explained proposals, accepting, the live map, drivers on duty, details, alerts, results.
 - **Interactive tour**: the same story played live inside the app with a spotlight and captions, using pause, back/next, exit and keyboard (space, ←/→, esc). Your own data is set aside during the tour and restored afterwards.
 - The video was recorded from the interactive tour with Playwright and encoded with ffmpeg, so it always shows the real product.
 

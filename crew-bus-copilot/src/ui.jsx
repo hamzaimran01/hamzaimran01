@@ -84,3 +84,18 @@ export function Kpi({ label, value, of, unit, intent, tip }) {
     </Card>
   );
 }
+
+/* Pseudonymous driver avatar: initials-style badge with the driver ID only (no photo, no name). */
+const AVATAR_HUES = ['blue', 'forest', 'orange', 'violet', 'turquoise', 'rose', 'gold', 'indigo', 'sepia', 'lime'];
+export function DriverAvatar({ driver, size = 40, status, selected, dim, onClick, title }) {
+  const n = parseInt(String(driver).replace(/\D/g, ''), 10) || 0;
+  const hue = AVATAR_HUES[(n - 1 + AVATAR_HUES.length) % AVATAR_HUES.length];
+  const style = { width: size, height: size, fontSize: Math.round(size * 0.34), background: `var(--bp-palette-${hue}-3)` };
+  const el = (
+    <button type="button" className={'avatar' + (selected ? ' is-sel' : '') + (dim ? ' is-dim' : '')} style={style} onClick={onClick} aria-label={title || driver}>
+      <span className="avatar-id">{String(driver).replace('D-', '')}</span>
+      {status && <span className={'avatar-dot dot-' + status} />}
+    </button>
+  );
+  return title ? <Tooltip content={title} placement="top" compact>{el}</Tooltip> : el;
+}

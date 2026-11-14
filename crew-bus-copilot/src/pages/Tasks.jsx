@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Button, Callout, Classes, Collapse, HTMLTable, Intent, Section, SectionCard, Tag, TextArea } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
 import { busOutLabel, fmt, HELP } from '../logic.js';
-import { BusChip, DirTag, PageIntro, Tip } from '../ui.jsx';
+import { BusChip, DirTag, DriverAvatar, PageIntro, Tip } from '../ui.jsx';
 
 const EXAMPLES = ['LH400 delayed 30 min', 'B03 broke down', 'B05 out of service from 06:30', 'add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45', 'cancel LH1500'];
 
@@ -75,7 +75,7 @@ export default function TasksPage() {
             <HTMLTable compact className="full-table">
               <thead><tr><th>Bus</th><th>Driver</th><th>Starts at</th><th>Shift</th><th>Status</th></tr></thead>
               <tbody>{S.buses.map((b) => { const out = busOutLabel(b); return (
-                <tr key={b.id}><td><BusChip id={b.id} intent={out ? Intent.DANGER : undefined} /></td><td className={Classes.MONOSPACE_TEXT}>{b.driver}</td><td>{b.start}</td><td className={Classes.MONOSPACE_TEXT}>{b.shift}</td>
+                <tr key={b.id}><td><BusChip id={b.id} intent={out ? Intent.DANGER : undefined} /></td><td><span className="row gap"><DriverAvatar driver={b.driver} size={24} /><span className={Classes.MONOSPACE_TEXT}>{b.driver}</span></span></td><td>{b.start}</td><td className={Classes.MONOSPACE_TEXT}>{b.shift}</td>
                   <td><Tag minimal intent={out ? Intent.DANGER : Intent.SUCCESS}>{out || 'In service'}</Tag></td></tr>); })}</tbody>
             </HTMLTable>
           </SectionCard>

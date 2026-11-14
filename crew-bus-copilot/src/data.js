@@ -76,6 +76,6 @@ var FRA_FACTS = {
 };
 
 /* Product tour video chapters (seconds into tour.mp4) */
-var TOUR_CHAPTERS = [{"t": 0.0, "title": "Intro"}, {"t": 7.4, "title": "The problem"}, {"t": 14.4, "title": "Tasks"}, {"t": 20.3, "title": "Disruptions"}, {"t": 27.4, "title": "Plan"}, {"t": 34.4, "title": "Accept"}, {"t": 40.9, "title": "Live map"}, {"t": 49.4, "title": "Details"}, {"t": 55.8, "title": "Alerts"}, {"t": 66.7, "title": "Results"}, {"t": 73.6, "title": "Summary"}];
+var TOUR_CHAPTERS = [{"t": 0.0, "title": "Intro"}, {"t": 7.4, "title": "The problem"}, {"t": 14.4, "title": "Tasks"}, {"t": 20.3, "title": "Disruptions"}, {"t": 27.5, "title": "Plan"}, {"t": 34.4, "title": "Accept"}, {"t": 40.9, "title": "Live map"}, {"t": 49.4, "title": "Drivers on duty"}, {"t": 55.3, "title": "Details"}, {"t": 61.7, "title": "Alerts"}, {"t": 72.7, "title": "Results"}, {"t": 79.6, "title": "Summary"}];
 
 export { SAMPLE_TASKS, SAMPLE_BUSES, LOCATIONS, DRIVE_MINUTES, RULES, FRA_FACTS, TOUR_CHAPTERS };

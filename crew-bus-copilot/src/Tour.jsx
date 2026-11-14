@@ -16,6 +16,7 @@ const SCENES = [
   { chapter: 'Live map', eyebrow: 'Step 4 · Live map', title: 'Watch the morning unfold', sub: 'Every bus moving across the apron, in sync with the plan.', tab: 'live', target: '.map-card', dur: 7500,
     pre: (a) => { a.setLive((l) => ({ ...l, view: 'map', mode: 'sim', source: 'copilot', t: 6 * 60 + 4, speed: 60, playing: false })); a.select(null); },
     run: async (x) => { await x.wait(500); x.app.current.setLive((l) => ({ ...l, playing: true })); } },
+  { chapter: 'Drivers on duty', eyebrow: 'Step 4 · Live map', title: 'Who is on duty, at a glance', sub: 'Every driver as a pseudonymous avatar with their bus and what it is doing now. No names, no performance tracking.', tab: 'live', target: '.roster', dur: 5500 },
   { chapter: 'Details', eyebrow: 'Step 4 · Live map', title: 'Tap anything for details', sub: 'Bus, crew, flight or place, linked across map, timeline and table.', tab: 'live', target: '#lvInspector', dur: 6000,
     run: async (x) => { x.app.current.select('bus', 'B02'); } },
   { chapter: 'Alerts', eyebrow: 'Step 5 · Alerts', title: 'Problems surface before crews are late', sub: 'A bus breaks down: the copilot moves its crews and tells you who is at risk.', tab: 'live', target: '.search-btn', dur: 6500,
