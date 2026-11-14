@@ -315,6 +315,7 @@
         '<div class="row gap wrap">' +
           '<button class="btn primary" data-action="acceptAll"' + (counts.open ? '' : ' disabled') + '>Accept all open on-time proposals</button>' +
           '<button class="btn" data-action="goto" data-tab="input">+ Disruption</button>' +
+          '<button class="btn" data-action="goto" data-tab="live">Open live board →</button>' +
         '</div>' +
         (S.lastChange ? '<p class="small changed-note">Last change: <span class="mono">' + esc(S.lastChange.text) + '</span>' + (changed.length ? ' — re-assigned: ' + changed.join(', ') : '') + '</p>' : '') +
         '<div class="legend small"><span><i class="lg lg-empty"></i>Empty drive</span><span><i class="lg lg-wait"></i>Waiting for crew</span><span><i class="lg lg-dep"></i>DEP run</span><span><i class="lg lg-arr"></i>ARR run</span><span><i class="lg lg-late"></i>Late</span><span><i class="lg lg-out"></i>Out of service</span></div>' +
@@ -416,6 +417,215 @@
       '<td class="mono ' + (good ? 'good' : bad ? 'bad' : 'muted') + '">' + (d === 0 ? 'same' : (d > 0 ? '+' : '') + d + pctTxt) + '</td></tr>';
   }
 
+  /* ---------- render: live board ---------- */
+  var L = { t: null, playing: false, speed: 10, mode: 'sim', source: 'copilot', timer: null, last: 0, shownSec: null };
+
+  function livePlan() { return L.source === 'today' ? base : plan; }
+  function liveRange(p) {
+    var a = [];
+    p.buses.forEach(function (b) { b.trips.forEach(function (tr) { tr.r.steps.forEach(function (s) { a.push(s.start, s.end); }); }); });
+    if (!a.length) return [360, 435];
+    return [Math.floor((Math.min.apply(null, a) - 5) / 5) * 5, Math.ceil((Math.max.apply(null, a) + 5) / 5) * 5];
+  }
+  function fmtSec(m) {
+    var s = Math.floor(m * 60 + 1e-6), h = Math.floor(s / 3600), mi = Math.floor(s / 60) % 60, se = s % 60;
+    return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0') + ':' + String(se).padStart(2, '0');
+  }
+  function inMin(x, t) { var d = Math.ceil(x - t - 1e-6); return d <= 0 ? 'now' : 'in ' + d + ' min'; }
+  function ids(a) { return a.join('+'); }
+  function realNow() { var d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
+
+  function busNow(b, t) {
+    var src = busById(b.id);
+    var out = src.outFrom === 0 || (src.outFrom != null && t >= src.outFrom);
+    var cur = null, curTrip = null, prevTrip = null, nextTrip = null;
+    b.trips.forEach(function (tr) {
+      if (tr.r.end <= t) prevTrip = tr;
+      else if (tr.r.start <= t) { curTrip = tr; tr.r.steps.forEach(function (s) { if (t >= s.start && t < s.end) cur = s; }); }
+      else if (!nextTrip) nextTrip = tr;
+    });
+    var loc = prevTrip ? prevTrip.r.endLoc : b.start;
+    var st = { kind: 'idle', label: 'Standby', what: 'at ' + loc, until: null, progress: null, next: nextTrip, trip: curTrip };
+    if (cur) {
+      st.until = cur.end; st.progress = (t - cur.start) / (cur.end - cur.start);
+      var pax = function (list) { return list.reduce(function (s, k) { var x = task(k); return s + (x ? x.pax : 0); }, 0); };
+      if (cur.type === 'empty') { st.kind = 'empty'; st.label = 'Driving empty'; st.what = cur.from + ' → ' + cur.to + ' to pick up ' + ids(curTrip.tasks.map(function (x) { return x.id; })); }
+      else if (cur.type === 'wait') { st.kind = 'wait'; st.label = 'Waiting for crew'; st.what = 'at ' + cur.at + ' for ' + ids(cur.waitingFor) + (cur.onboard.length ? ' · ' + ids(cur.onboard) + ' on board' : ''); }
+      else if (cur.type === 'board') { st.kind = 'board'; st.label = 'Boarding'; st.what = ids(cur.tasks) + ' at ' + cur.at; }
+      else if (cur.type === 'drive') { st.kind = 'drive'; st.label = 'Crew on board'; st.what = cur.from + ' → ' + cur.to + ' · ' + ids(cur.onboard) + ' · ' + pax(cur.onboard) + ' pax'; }
+      else if (cur.type === 'drop') { st.kind = 'drop'; st.label = 'Drop-off'; st.what = ids(cur.tasks) + ' at ' + cur.at; }
+    } else if (out) { st.kind = 'out'; st.label = 'Out of service'; st.what = 'at ' + loc; }
+    else if (t < src.shiftStart || t >= src.shiftEnd) { st.kind = 'off'; st.label = 'Off shift'; st.what = 'shift ' + src.shift; }
+    if (out && !cur) st.next = null;
+    return st;
+  }
+
+  function taskNow(t, a, now) {
+    var r = a.res, tr = a.trip;
+    var key = t.dir === 'DEP' ? r.doneAt : r.pickupAt;
+    var s;
+    if (now >= r.doneAt) s = { k: 'done', label: t.dir === 'DEP' ? 'At aircraft' : 'At Crew Center' };
+    else if (now >= r.boardEnd) s = { k: 'onboard', label: 'On board' };
+    else if (now >= r.boardStart) s = { k: 'boarding', label: 'Boarding' };
+    else if (now >= tr.r.start) s = { k: 'enroute', label: 'Bus on the way' };
+    else s = { k: 'planned', label: 'Planned' };
+    s.key = key; s.slack = t.due - key; s.late = r.late;
+    s.liveLate = r.late > 0 || (now > t.due && now < key);
+    s.tight = !s.liveLate && s.slack <= 2 && s.k !== 'done';
+    return s;
+  }
+
+  function renderLive() {
+    var el = $('#view-live');
+    var p = livePlan(), rg = liveRange(p);
+    if (L.t == null) L.t = Math.min(Math.max(6 * 60 + 18, rg[0]), rg[1]);
+    el.innerHTML =
+      '<div class="card lv-controls">' +
+        '<div class="lv-clock"><div class="lv-time mono" id="liveClock"></div><div class="small muted" id="liveClockNote"></div></div>' +
+        '<div class="lv-ctrl">' +
+          '<div class="row gap wrap">' +
+            '<div class="seg-btns" role="group" aria-label="Clock">' +
+              '<button class="btn small-btn' + (L.mode === 'sim' ? ' on' : '') + '" data-action="liveMode" data-mode="sim">Replay sample day</button>' +
+              '<button class="btn small-btn' + (L.mode === 'real' ? ' on' : '') + '" data-action="liveMode" data-mode="real">Real clock</button>' +
+            '</div>' +
+            '<div class="seg-btns" role="group" aria-label="Plan shown">' +
+              '<button class="btn small-btn' + (L.source === 'copilot' ? ' on' : '') + '" data-action="liveSource" data-source="copilot">Current plan</button>' +
+              '<button class="btn small-btn' + (L.source === 'today' ? ' on' : '') + '" data-action="liveSource" data-source="today">Today’s dispatching</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="row gap wrap lv-play"' + (L.mode === 'real' ? ' hidden' : '') + '>' +
+            '<button class="btn small-btn" data-action="liveJump" data-delta="-5" aria-label="Back 5 minutes">−5 min</button>' +
+            '<button class="btn small-btn primary lv-pp" data-action="livePlay" id="livePlayBtn"></button>' +
+            '<button class="btn small-btn" data-action="liveJump" data-delta="5" aria-label="Forward 5 minutes">+5 min</button>' +
+            '<div class="seg-btns" role="group" aria-label="Speed">' + [1, 10, 60].map(function (s) {
+              return '<button class="btn small-btn' + (L.speed === s ? ' on' : '') + '" data-action="liveSpeed" data-speed="' + s + '">' + s + '×</button>';
+            }).join('') + '</div>' +
+            '<input type="range" id="liveSlider" min="' + rg[0] + '" max="' + rg[1] + '" step="0.25" value="' + L.t + '" aria-label="Time of day">' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="liveBody"></div>';
+    L.shownSec = null;
+    updateLive(true);
+  }
+
+  function updateLive(force) {
+    var body = $('#liveBody'); if (!body) return;
+    var p = livePlan(), rg = liveRange(p);
+    var t = L.mode === 'real' ? realNow() : L.t;
+    var sec = Math.floor(t * 60);
+    if (!force && sec === L.shownSec) return;
+    L.shownSec = sec;
+    $('#liveClock').textContent = fmtSec(t);
+    var note = L.mode === 'real'
+      ? (t < rg[0] || t > rg[1] ? 'Your clock is outside the sample day (' + fmt(rg[0]) + '–' + fmt(rg[1]) + '). Switch to Replay to see it run.' : 'Following your computer’s clock')
+      : (L.playing ? 'Replaying at ' + L.speed + '×' : 'Paused · drag the slider or press play');
+    $('#liveClockNote').textContent = note;
+    var pb = $('#livePlayBtn'); if (pb) pb.textContent = L.playing ? '❚❚ Pause' : (L.t >= rg[1] ? '↺ Replay' : '▶ Play');
+    var sl = $('#liveSlider'); if (sl && document.activeElement !== sl) sl.value = L.t;
+
+    var span = rg[1] - rg[0];
+    function pct(x) { return (Math.min(Math.max(x, rg[0]), rg[1]) - rg[0]) / span * 100; }
+    var nowPct = pct(t);
+    var ticks = '';
+    for (var x = Math.ceil(rg[0] / 10) * 10; x <= rg[1]; x += 10) ticks += '<span class="tick" style="left:' + pct(x).toFixed(2) + '%">' + fmt(x) + '</span>';
+
+    // task statuses
+    var counts = { planned: 0, enroute: 0, boarding: 0, onboard: 0, done: 0, late: 0 };
+    var trows = S.tasks.slice().sort(function (a, b) { return a.due - b.due || (a.id < b.id ? -1 : 1); }).map(function (tk) {
+      var a = p.byTask[tk.id];
+      if (!a) return '<tr class="lv-late"><td><span class="lvp lvp-late">No bus</span></td><td class="mono">' + tk.id + '</td><td class="mono">' + esc(tk.flight) + '</td><td colspan="6" class="bad">No feasible bus</td></tr>';
+      var s = taskNow(tk, a, t);
+      counts[s.k]++; if (s.liveLate) counts.late++;
+      var b = busById(a.bus);
+      var dec = L.source === 'copilot' ? statusOf(tk.id) : null;
+      var decTag = dec === 'accepted' ? '<span class="tag tag-ok" title="Accepted by dispatcher">✓</span>'
+        : dec === 'overruled' ? '<span class="tag tag-warn">override</span>'
+        : dec === 'open' ? '<span class="tag" title="Copilot proposal, not yet accepted">proposal</span>' : '';
+      var slack = s.liveLate ? '<span class="bad">+' + Math.max(s.late, Math.ceil(t - tk.due)) + ' late</span>'
+        : s.k === 'done' ? '<span class="good">' + s.slack + ' min early</span>'
+        : '<span class="' + (s.tight ? 'warn' : 'muted') + '">' + s.slack + ' min spare</span>';
+      return '<tr class="lv-' + s.k + (s.liveLate ? ' lv-late' : '') + '">' +
+        '<td><span class="lvp lvp-' + (s.liveLate && s.k !== 'done' ? 'late' : s.k) + '">' + s.label + '</span>' + (s.tight ? ' <span class="tag tag-warn">tight</span>' : '') + '</td>' +
+        '<td class="mono strong">' + tk.id + '</td><td class="mono">' + esc(tk.flight) + ' <span class="dir dir-' + tk.dir + '">' + tk.dir + '</span></td>' +
+        '<td class="mono"><span class="strong">' + b.driver + '</span> · ' + a.bus + ' ' + decTag + '</td>' +
+        '<td>' + esc(shortLoc(tk.from)) + ' → ' + esc(shortLoc(tk.to)) + ' <span class="muted small">' + tk.pax + ' pax</span></td>' +
+        '<td class="mono">' + fmt(a.res.boardStart) + '</td>' +
+        '<td class="mono">' + fmt(s.key) + ' <span class="muted">/ ' + fmt(tk.due) + '</span></td>' +
+        '<td class="mono small">' + slack + '</td></tr>';
+    }).join('');
+
+    // driver rows
+    var rows = p.buses.map(function (b) {
+      var st = busNow(b, t);
+      var src = busById(b.id);
+      var bars = '';
+      if (src.outFrom != null) { var o = src.outFrom || rg[0]; bars += '<div class="seg seg-out" style="left:' + pct(o) + '%;width:' + (pct(rg[1]) - pct(o)) + '%"></div>'; }
+      b.trips.forEach(function (tr) {
+        var isCur = st.trip === tr;
+        tr.r.segs.forEach(function (sg) {
+          if (sg.end <= sg.start) return;
+          bars += '<div class="seg seg-' + sg.type + (tr.tasks[0].dir === 'ARR' && sg.type === 'service' ? ' seg-arr' : '') + (tr.r.late && sg.type === 'service' ? ' seg-late' : '') +
+            (tr.r.end <= t ? ' seg-past' : '') + (isCur ? ' seg-cur' : '') + '" style="left:' + pct(sg.start).toFixed(2) + '%;width:' + (pct(sg.end) - pct(sg.start)).toFixed(2) + '%" title="' +
+            esc(sg.type === 'service' ? ids(tr.tasks.map(function (x) { return x.id; })) + ': ' + tr.r.route.join(' → ') + ' ' + fmt(sg.start) + '–' + fmt(sg.end) : sg.type === 'empty' ? 'Empty ' + sg.from + ' → ' + sg.to : 'Waiting at ' + sg.at) + '">' +
+            (sg.type === 'service' ? '<span>' + ids(tr.tasks.map(function (x) { return x.id; })) + '</span>' : '') + '</div>';
+        });
+      });
+      var next = st.next
+        ? 'Next: <span class="mono strong">' + ids(st.next.tasks.map(function (x) { return x.id; })) + '</span> ' + esc(st.next.tasks[0].flight) + ' · leaves ' + esc(shortLoc(st.next.startLoc)) + ' ' + fmt(st.next.r.start) + ' <span class="muted">(' + inMin(st.next.r.start, t) + ')</span>'
+        : '<span class="muted">No more runs planned</span>';
+      return '<div class="lv-row lvk-' + st.kind + '">' +
+        '<div class="lv-info">' +
+          '<div class="lv-id"><span class="lv-drv mono">' + b.driver + '</span><span class="mono muted small">' + b.id + '</span><span class="lvs lvs-' + st.kind + '">' + st.label + '</span></div>' +
+          '<div class="lv-what">' + esc(st.what) + (st.until != null ? ' <span class="muted small">· until ' + fmt(st.until) + ' (' + inMin(st.until, t) + ')</span>' : '') + '</div>' +
+          (st.progress != null ? '<div class="lv-prog"><span style="width:' + (st.progress * 100).toFixed(1) + '%"></span></div>' : '') +
+          '<div class="lv-next small">' + next + '</div>' +
+        '</div>' +
+        '<div class="lv-track"><div class="tl-track">' +
+          '<div class="lv-pastshade" style="width:' + nowPct.toFixed(2) + '%"></div>' + bars +
+          '<div class="lv-now" style="left:' + nowPct.toFixed(2) + '%"></div>' +
+        '</div></div>' +
+      '</div>';
+    }).join('');
+
+    var chip = function (k, label, n) { return '<span class="lv-count"><span class="lvp lvp-' + k + '">' + label + '</span><b class="mono">' + n + '</b></span>'; };
+    body.innerHTML =
+      '<div class="lv-counts">' +
+        chip('planned', 'Planned', counts.planned) + chip('enroute', 'Bus on the way', counts.enroute) + chip('boarding', 'Boarding', counts.boarding) +
+        chip('onboard', 'On board', counts.onboard) + chip('done', 'Delivered', counts.done) + chip('late', 'Late', counts.late) +
+        '<span class="muted small lv-src">Showing ' + (L.source === 'copilot' ? 'the current plan (copilot + dispatcher overrides' + (S.log.length ? ', with disruptions' : '') + ')' : 'today’s dispatching (dispatcher_bus column)') + '</span>' +
+      '</div>' +
+      '<div class="card lv-board">' +
+        '<div class="lv-row lv-axisrow"><div class="lv-info small muted">Driver · what they are doing now</div><div class="lv-track"><div class="tl-axis">' + ticks +
+          '<span class="lv-nowlabel mono" style="left:' + nowPct.toFixed(2) + '%">' + fmt(t) + '</span></div></div></div>' +
+        rows +
+      '</div>' +
+      '<div class="card"><div class="row between wrap"><h2>Crew tasks right now</h2><span class="muted small">Sorted by due time · ETA = at aircraft (DEP) or picked up (ARR)</span></div>' +
+        '<div class="table-wrap"><table class="tbl lv-tbl"><thead><tr><th>Status</th><th>Task</th><th>Flight</th><th>Driver · bus</th><th>Route</th><th>Boards</th><th>ETA / due</th><th>Margin</th></tr></thead><tbody>' + trows + '</tbody></table></div>' +
+      '</div>' +
+      '<p class="wc-inline small">Planning use only, no performance monitoring of drivers. The board shows the plan, not tracked vehicle positions.</p>';
+  }
+
+  function liveTick() {
+    var now = performance.now(), dt = (now - L.last) / 1000; L.last = now;
+    if (L.mode === 'sim' && L.playing) {
+      var rg = liveRange(livePlan());
+      L.t = Math.min(rg[1], L.t + L.speed * dt / 60);
+      if (L.t >= rg[1]) { L.playing = false; ensureTimer(); }
+    }
+    updateLive(false);
+  }
+  function ensureTimer() {
+    var need = tab === 'live' && (L.mode === 'real' || L.playing);
+    if (need && !L.timer) { L.last = performance.now(); L.timer = setInterval(liveTick, 200); }
+    if (!need && L.timer) { clearInterval(L.timer); L.timer = null; }
+    updateLive(true);
+  }
+
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'liveSlider') { L.t = parseFloat(e.target.value); updateLive(true); }
+  });
+
   /* ---------- wiring ---------- */
   function renderAll() {
     compute();
@@ -423,7 +633,7 @@
     Object.keys(S.accepted).forEach(function (k) { if (!plan.byTask[k] || plan.byTask[k].bus !== S.accepted[k]) delete S.accepted[k]; });
     var keepText = $('#disruptText') ? $('#disruptText').value : '';
     var keepRes = $('#parseResult') ? $('#parseResult').innerHTML : '';
-    renderInput(); renderPlan(); renderOverview();
+    renderInput(); renderPlan(); renderOverview(); renderLive();
     if (keepText) $('#disruptText').value = keepText;
     if (keepRes) $('#parseResult').innerHTML = keepRes;
     var open = S.tasks.filter(function (t) { return statusOf(t.id) === 'open'; }).length;
@@ -436,6 +646,7 @@
     try { localStorage.setItem(STORE + '.tab', t); } catch (e) {}
     document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t); });
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + t); });
+    ensureTimer();
   }
 
   document.addEventListener('click', function (e) {
@@ -471,6 +682,16 @@
         S.overrides[id] = sel.value; delete S.accepted[id]; openOverrule = null;
         S.lastChange = null;
         renderAll(); toast(id + ' overruled → ' + sel.value + '. Plan re-optimised.'); break;
+      case 'livePlay':
+        var rg = liveRange(livePlan());
+        if (!L.playing && L.t >= rg[1]) L.t = rg[0];
+        L.playing = !L.playing; ensureTimer(); break;
+      case 'liveSpeed': L.speed = +el.dataset.speed; renderLive(); ensureTimer(); break;
+      case 'liveJump':
+        var rj = liveRange(livePlan());
+        L.t = Math.min(rj[1], Math.max(rj[0], L.t + (+el.dataset.delta))); updateLive(true); break;
+      case 'liveMode': L.mode = el.dataset.mode; if (L.mode === 'real') L.playing = false; renderLive(); ensureTimer(); break;
+      case 'liveSource': L.source = el.dataset.source; renderLive(); break;
       case 'revert':
         delete S.overrides[id]; delete S.overrideFrom[id]; renderAll(); toast(id + ' back to copilot proposal.'); break;
     }

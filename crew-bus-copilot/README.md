@@ -7,6 +7,7 @@ Open `index.html` by double-clicking it. No server, no install, no network calls
    `add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45`, `cancel LH1500`, `undo`, `reset`.
 2. **Copilot plan** – a timeline per bus. Each assignment has a one-line "why" and Accept / Overrule buttons. The Overrule picker shows what the choice does to the plan.
 3. **Overview** – today's dispatching (the `dispatcher_bus` column) next to the copilot plan for the same day: crews on time, late minutes, empty and total km, buses used, and overrides.
+4. **Live board** – one row per driver showing what they are doing at the current time (standby, driving empty, waiting for crew, boarding, crew on board, drop-off, out of service), their next run, and a timeline with a moving "now" line. Below it, every task's live status: planned, bus on the way, boarding, on board, delivered or late. The clock replays the sample day (play/pause, 1× / 10× / 60×, slider) or follows the computer's clock. It shows the current plan (including disruptions and overrides) or today's dispatching. It shows planned positions only, not tracked vehicles.
 
 ## Model assumptions
 - DEP: the crew counts as arrived when drop-off is done; the task is late if that is after the due time. ARR: the task is late if pickup is after the due time.

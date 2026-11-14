@@ -28,7 +28,9 @@ var Engine = (function () {
 
   /* Simulate one bus run serving `tasks` (same direction) in a fixed stop order. */
   function simOrder(loc, avail, tasks, order) {
-    var res = { tasks: {}, segs: [], loaded: 0 };
+    var res = { tasks: {}, segs: [], steps: [], loaded: 0 };
+    function step(o) { if (o.end > o.start) res.steps.push(o); }
+    function idsOf(a) { return a.map(function (x) { return x.id; }); }
     var t, cur;
     if (tasks[0].dir === 'DEP') {
       var pickup = tasks[0].from;
@@ -39,13 +41,23 @@ var Engine = (function () {
       var board = Math.max(arrive, maxReady);
       res.segs.push({ type: 'empty', start: leave, end: arrive, from: loc, to: pickup });
       if (board > arrive) res.segs.push({ type: 'wait', start: arrive, end: board, at: pickup });
-      tasks.forEach(function (x) { res.tasks[x.id] = { pickupAt: board }; });
+      tasks.forEach(function (x) { res.tasks[x.id] = { pickupAt: board, boardStart: board, boardEnd: board + R.boarding }; });
+      step({ type: 'empty', start: leave, end: arrive, from: loc, to: pickup, onboard: [] });
+      step({ type: 'wait', start: arrive, end: board, at: pickup, onboard: [], waitingFor: idsOf(tasks) });
+      step({ type: 'board', start: board, end: board + R.boarding, at: pickup, tasks: idsOf(tasks), onboard: [] });
       t = board + R.boarding; cur = pickup;
+      var onb = idsOf(tasks);
       order.forEach(function (stop) {
-        var d = drive(cur, stop); t += d; res.loaded += d; t += R.dropoff;
-        tasks.filter(function (x) { return x.to === stop; }).forEach(function (x) {
+        var d = drive(cur, stop);
+        step({ type: 'drive', start: t, end: t + d, from: cur, to: stop, onboard: onb.slice() });
+        t += d; res.loaded += d;
+        var here = tasks.filter(function (x) { return x.to === stop; });
+        step({ type: 'drop', start: t, end: t + R.dropoff, at: stop, tasks: idsOf(here), onboard: onb.slice() });
+        t += R.dropoff;
+        here.forEach(function (x) {
           var r = res.tasks[x.id]; r.doneAt = t; r.keyTime = t; r.late = Math.max(0, t - x.due);
         });
+        onb = onb.filter(function (k) { return here.every(function (x) { return x.id !== k; }); });
         cur = stop;
       });
       res.segs.push({ type: 'service', start: board, end: t });
@@ -59,9 +71,10 @@ var Engine = (function () {
       var leave2 = Math.max(avail, firstReady - empty2);
       t = leave2 + empty2; cur = first;
       res.segs.push({ type: 'empty', start: leave2, end: t, from: loc, to: first });
-      var serviceStart = null;
+      step({ type: 'empty', start: leave2, end: t, from: loc, to: first, onboard: [] });
+      var serviceStart = null, onb2 = [];
       order.forEach(function (stop, i) {
-        if (i > 0) { var d = drive(cur, stop); t += d; res.loaded += d; }
+        if (i > 0) { var d = drive(cur, stop); step({ type: 'drive', start: t, end: t + d, from: cur, to: stop, onboard: onb2.slice() }); t += d; res.loaded += d; }
         var arr = t;
         var here = tasks.filter(function (x) { return x.from === stop; });
         var stopReady = Math.max.apply(null, here.map(function (x) { return x.ready; }));
@@ -70,13 +83,19 @@ var Engine = (function () {
           if (board2 > arr) res.segs.push({ type: 'wait', start: arr, end: board2, at: stop });
           serviceStart = board2;
         }
+        step({ type: 'wait', start: arr, end: board2, at: stop, onboard: onb2.slice(), waitingFor: idsOf(here) });
+        step({ type: 'board', start: board2, end: board2 + R.boarding, at: stop, tasks: idsOf(here), onboard: onb2.slice() });
         here.forEach(function (x) {
           var p = Math.max(arr, x.ready);
-          res.tasks[x.id] = { pickupAt: p, keyTime: p, late: Math.max(0, p - x.due) };
+          res.tasks[x.id] = { pickupAt: p, keyTime: p, late: Math.max(0, p - x.due), boardStart: board2, boardEnd: board2 + R.boarding };
         });
+        onb2 = onb2.concat(idsOf(here));
         t = board2 + R.boarding; cur = stop;
       });
-      var d2 = drive(cur, dest); t += d2; res.loaded += d2; t += R.dropoff;
+      var d2 = drive(cur, dest);
+      step({ type: 'drive', start: t, end: t + d2, from: cur, to: dest, onboard: onb2.slice() });
+      step({ type: 'drop', start: t + d2, end: t + d2 + R.dropoff, at: dest, tasks: onb2.slice(), onboard: onb2.slice() });
+      t += d2; res.loaded += d2; t += R.dropoff;
       tasks.forEach(function (x) { res.tasks[x.id].doneAt = t; });
       res.segs.push({ type: 'service', start: serviceStart, end: t });
       res.leave = leave2; res.empty = empty2; res.start = leave2; res.end = t; res.endLoc = dest;
