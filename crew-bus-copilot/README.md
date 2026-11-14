@@ -1,13 +1,27 @@
 # Crew Bus Copilot (prototype)
 
-Open `index.html` by double-clicking it. No server, no install, no network calls. It uses only the synthetic sample data in `data.js`.
+Open `index.html` by double-clicking it. There is no server, no install and no network call. On first open, a short introduction explains the case.
 
-1. **Tasks & disruptions** – the task list, the bus status, and a plain-words box for disruptions, e.g.
-   `LH400 delayed 30 min`, `B03 broke down`, `B05 out of service from 06:30`, `B03 back in service`,
-   `add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45`, `cancel LH1500`, `undo`, `reset`.
-2. **Copilot plan** – a timeline per bus. Each assignment has a one-line "why" and Accept / Overrule buttons. The Overrule picker shows what the choice does to the plan.
-3. **Overview** – today's dispatching (the `dispatcher_bus` column) next to the copilot plan for the same day: crews on time, late minutes, empty and total km, buses used, and overrides.
-4. **Live board** – one row per driver showing what they are doing at the current time (standby, driving empty, waiting for crew, boarding, crew on board, drop-off, out of service), their next run, and a timeline with a moving "now" line. Below it, every task's live status: planned, bus on the way, boarding, on board, delivered or late. The clock replays the sample day (play/pause, 1× / 10× / 60×, slider) or follows the computer's clock. It shows the current plan (including disruptions and overrides) or today's dispatching. It shows planned positions only, not tracked vehicles.
+## Pages
+1. **Tasks**: every crew that needs a bus. Report a disruption in plain words, for example `LH400 delayed 30 min`, `B03 broke down`, `B05 out of service from 06:30`, `B03 back in service`, `add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45`, `cancel LH1500`, `undo` or `reset`.
+2. **Plan**: a timeline per bus. Each assignment has a one-line "why" and **Accept** / **Overrule** buttons. Overrule shows what each alternative bus would do to the whole plan.
+3. **Live map**: a drawn, schematic map of Frankfurt Airport (runways, Terminal 1 with concourses A/B/C/Z, Terminal 2, the 7 locations). Buses move along their routes in sync with a replay clock (play/pause, 1× / 10× / 60×, slider) or the real clock. Next to the map:
+   - an inspector panel for the selected bus, crew task, flight or place
+   - layer toggles: airport, routes, labels, waiting crews
+   - a timeline row per bus and driver, and a live status table for every crew task
+
+   Selecting something highlights it everywhere: on the map, in the timeline and in the table.
+4. **Results**: today's dispatching (the `dispatcher_bus` column) next to the copilot on the same day, with a plain-language headline and public Frankfurt Airport figures (sources cited).
+
+## Across the app
+- **⌘K / Ctrl+K or `/`** opens a command bar: search tasks, flights and buses, jump to pages, or type a disruption to apply it.
+- **Alerts**: pop-up banners and an alert center (bell) for crews that will be late, tight connections (≤ 1 min spare), buses going out of service, missing buses, and plan updates. Each alert has a "View" button that selects the item on the map. Pop-ups can be switched off.
+- **Design**: Apple Human Interface Guidelines style with system font and colours, segmented controls, frosted bars, sheets, 44 px tap targets, a bottom tab bar on phones, and light and dark mode. The motion includes view transitions, count-ups, a spring on alerts and accepted items, buses gliding on the map, and pulsing live indicators. All of it turns off when the system "reduce motion" setting is on.
+
+## Data
+- Crew tasks, buses and driving times are the **synthetic** sample from the brief (`data.js`).
+- The map follows Frankfurt Airport's real layout, but schematically: positions are approximate and not to scale, and it shows **planned** positions, not tracked vehicles.
+- The airport figures (61.6 M passengers, 440,853 movements and 2.1 M t cargo in 2024, 60+ gates in Terminal 1) come from Fraport's 2024 traffic figures and its terminal page. Links are in `data.js` and on the Results page.
 
 ## Model assumptions
 - DEP: the crew counts as arrived when drop-off is done; the task is late if that is after the due time. ARR: the task is late if pickup is after the due time.
@@ -15,7 +29,6 @@ Open `index.html` by double-clicking it. No server, no install, no network calls
 - Sharing is allowed for the same direction, ready times within 10 min, stops at most 3 driving min apart, at most 20 seats and 3 stops, and only when nobody is late.
 - Score = 40 × late min + empty min. Ties go to less driving, then to a bus already in use, then to the lower bus ID.
 - Km are estimated from driving minutes at an assumed 20 km/h.
-- In today's column, a task with no usable recorded bus (an added task, or its bus is out of service) goes to the first bus that can reach the pickup.
-- Decisions and disruptions are saved in this browser (localStorage). Use **Reset day** to clear them.
 
-Planning use only, no performance monitoring of drivers. Drivers are shown only by pseudonymous ID.
+## Works council
+Planning use only, no performance monitoring of drivers. Driver IDs (D-01 …) appear only in planning tables. The map and alerts show bus IDs only.
