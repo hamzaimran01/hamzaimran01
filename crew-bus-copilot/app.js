@@ -450,7 +450,12 @@
       case 'chip': $('#disruptText').value = el.dataset.text; $('#disruptText').focus(); break;
       case 'undo': doApply('undo'); break;
       case 'reset':
-        if (confirm('Reset to the original sample day? Disruptions and decisions are cleared.')) { $('#disruptText').value = ''; doApply('reset'); $('#parseResult').innerHTML = ''; }
+        if (!el.dataset.armed) {
+          el.dataset.armed = '1'; el.textContent = 'Click again to reset';
+          setTimeout(function () { if (el.isConnected) { delete el.dataset.armed; el.textContent = 'Reset day'; } }, 4000);
+          break;
+        }
+        $('#disruptText').value = ''; doApply('reset'); $('#parseResult').innerHTML = ''; toast('Back to the original sample day.');
         break;
       case 'accept': S.accepted[id] = plan.byTask[id].bus; renderAll(); break;
       case 'unaccept': delete S.accepted[id]; renderAll(); break;

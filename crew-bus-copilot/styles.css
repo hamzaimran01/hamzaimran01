@@ -54,7 +54,7 @@ h3 { font-size: 13px; margin: 16px 0 6px; color: var(--muted); text-transform: u
 .wrap { flex-wrap: wrap; }
 
 /* top bar */
-.topbar { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border);
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 24px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .logo { width: 36px; height: 36px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
