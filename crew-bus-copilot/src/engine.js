@@ -1,3 +1,4 @@
+import { RULES, DRIVE_MINUTES } from "./data.js";
 /* Rule-based planning engine. All times are minutes after midnight. */
 var Engine = (function () {
   var R = RULES;
@@ -271,3 +272,5 @@ var Engine = (function () {
   return { drive: drive, toMin: toMin, fmt: fmt, simTrip: simTrip, canShare: canShare, score: score,
     planCopilot: planCopilot, planBaseline: planBaseline, metrics: metrics };
 })();
+
+export { Engine };

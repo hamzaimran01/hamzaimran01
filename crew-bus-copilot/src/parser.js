@@ -1,3 +1,4 @@
+import { Engine } from "./engine.js";
 /* Rule-based disruption parser. No AI, no network. Returns command objects; app.js applies them. */
 var Parser = (function () {
   var LOC_PATTERNS = [
@@ -140,3 +141,5 @@ var Parser = (function () {
 
   return { parse: parse, HELP: HELP };
 })();
+
+export { Parser };

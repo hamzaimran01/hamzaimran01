@@ -88,3 +88,5 @@ var FraMap = (function () {
 
   return { NODES: NODES, node: node, along: along, pathD: pathD, staticSvg: staticSvg };
 })();
+
+export { FraMap };

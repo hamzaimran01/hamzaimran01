@@ -2,6 +2,25 @@
 
 Open `index.html` by double-clicking it. There is no server, no install and no network call. On first open, a short introduction explains the case.
 
+## Built with Palantir Blueprint
+The UI is React 18 + [Palantir Blueprint](https://github.com/palantir/blueprint) v6 (`@blueprintjs/core`, `@blueprintjs/select`, `@blueprintjs/icons`), using:
+- **Navbar and Tabs** for page navigation
+- **Card** and **Section**, **HTMLTable**, **Tag** and **Callout**
+- **Button**, **SegmentedControl**, **Slider** and **Switch**
+- **Dialog**: welcome and video
+- **Alert**: reset confirmation
+- **Popover** and **Menu**: the alert center
+- **OverlayToaster**: pop-up alerts
+- **Omnibar**: the ⌘K command bar
+- **Tooltip** and **NonIdealState**, plus Blueprint's light and dark themes
+
+The bundle is prebuilt in `dist/`, so `index.html` works offline. To change the code:
+```
+npm install
+npm run build      # bundles src/ into dist/app.js and dist/app.css with esbuild
+```
+Source: `src/main.jsx` (entry), `src/App.jsx` (shell, alerts, command bar, dialogs), `src/pages/*.jsx`, `src/Tour.jsx`. The planning logic is UI-free in `src/engine.js`, `src/parser.js`, `src/logic.js`, `src/map.js` and `src/data.js`. Only the Blueprint icons the app uses are bundled, and `build.mjs` generates `src/icons.js`.
+
 ## Pages
 1. **Tasks**: every crew that needs a bus. Report a disruption in plain words, for example `LH400 delayed 30 min`, `B03 broke down`, `B05 out of service from 06:30`, `B03 back in service`, `add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45`, `cancel LH1500`, `undo` or `reset`.
 2. **Plan**: a timeline per bus. Each assignment has a one-line "why" and **Accept** / **Overrule** buttons. Overrule shows what each alternative bus would do to the whole plan.
@@ -24,7 +43,7 @@ Live map → **Airfield camera**. Fraport runs no official 24/7 public stream, s
 ## Across the app
 - **⌘K / Ctrl+K or `/`** opens a command bar: search tasks, flights and buses, jump to pages, or type a disruption to apply it.
 - **Alerts**: pop-up banners and an alert center (bell) for crews that will be late, tight connections (≤ 1 min spare), buses going out of service, missing buses, and plan updates. Each alert has a "View" button that selects the item on the map. Pop-ups can be switched off.
-- **Design**: Apple Human Interface Guidelines style with system font and colours, segmented controls, frosted bars, sheets, 44 px tap targets, a bottom tab bar on phones, and light and dark mode. The motion includes view transitions, count-ups, a spring on alerts and accepted items, buses gliding on the map, and pulsing live indicators. All of it turns off when the system "reduce motion" setting is on.
+- **Design**: Blueprint components and palette, light and dark mode (it follows the system), and a bottom tab bar on phones. The motion includes view transitions, count-ups, a pop when you accept, buses gliding on the map, and pulsing live indicators. All of it turns off when the system "reduce motion" setting is on.
 
 ## Data
 - Crew tasks, buses and driving times are the **synthetic** sample from the brief (`data.js`).
