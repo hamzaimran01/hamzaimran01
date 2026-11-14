@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew Bus Copilot</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="5" width="18" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 11h18M8 5v6M16 5v6" stroke="currentColor" stroke-width="2"/><circle cx="7.5" cy="19" r="1.6" fill="currentColor"/><circle cx="16.5" cy="19" r="1.6" fill="currentColor"/></svg>
+    </span>
+    <div>
+      <div class="title">Crew Bus Copilot</div>
+      <div class="subtitle">Frankfurt crew transport · prototype · synthetic sample day</div>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="input"><span class="num">1</span> Tasks &amp; disruptions</button>
+    <button class="tab" role="tab" data-tab="plan"><span class="num">2</span> Copilot plan <span class="pill" id="openBadge"></span></button>
+    <button class="tab" role="tab" data-tab="overview"><span class="num">3</span> Overview</button>
+    <button class="tab" role="tab" data-tab="live"><span class="num">4</span> Live board <span class="live-dot" aria-hidden="true"></span></button>
+  </nav>
+</header>
+
+<main>
+  <section id="view-input" class="view"></section>
+  <section id="view-plan" class="view"></section>
+  <section id="view-overview" class="view"></section>
+  <section id="view-live" class="view"></section>
+</main>
+
+<footer class="footer">
+  <span class="wc-note">Planning use only, no performance monitoring of drivers.</span>
+  <span>Drivers shown by pseudonymous ID only (D-01 …). Synthetic data, no real or confidential information.</span>
+</footer>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="parser.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
