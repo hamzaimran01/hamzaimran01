@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alignment, Button, Dialog, DialogBody, DialogFooter, Icon, Intent, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup,
+  Alignment, Button, ButtonGroup, Card, CardList, Classes, Dialog, DialogBody, DialogFooter, H3, Icon, Intent, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup,
   NavbarHeading, NonIdealState, OverlayToaster, Popover, Switch, Tab, Tabs, Tag, KeyComboTag
 } from '@blueprintjs/core';
 import { Omnibar } from '@blueprintjs/select';
@@ -214,9 +214,10 @@ export default function App() {
       <div className="app">
         <Navbar className="topbar">
           <NavbarGroup align={Alignment.START}>
+            <Icon icon="drive-time" size={20} intent={Intent.PRIMARY} className="brand-icon" />
             <NavbarHeading className="brand">
-              <span className="app-icon"><Icon icon="drive-time" size={20} /></span>
-              <span className="brand-text"><span className="title">Crew Bus Copilot</span><span className="subtitle">AI dispatch copilot · Frankfurt Airport</span></span>
+              <span className="brand-title">Crew Bus Copilot</span>
+              <span className={Classes.TEXT_MUTED + ' brand-sub'}>AI dispatch copilot · Frankfurt Airport</span>
             </NavbarHeading>
             <NavbarDivider className="hide-sm" />
             <Tabs id="pages" selectedTabId={tab} onChange={(t) => setTab(String(t))} className="page-tabs hide-sm" size="large">
@@ -242,16 +243,18 @@ export default function App() {
 
         <footer className="footer">
           <Tag intent={Intent.WARNING} minimal icon="shield" className="wc-note">Planning use only, no performance monitoring of drivers.</Tag>
-          <span>Drivers appear only as pseudonymous IDs (D-01 …). Crew tasks and buses are synthetic; the airport map is schematic. Built with Palantir Blueprint.</span>
+          <span className={Classes.TEXT_MUTED}>Drivers appear only as pseudonymous IDs (D-01 …). Crew tasks and buses are synthetic; the airport map is schematic. Built with Palantir Blueprint.</span>
         </footer>
 
-        <nav className="tabbar" aria-label="Pages">
-          {PAGES.map((p) => (
-            <button key={p.id} className={tab === p.id ? 'active' : ''} onClick={() => setTab(p.id)} aria-current={tab === p.id}>
-              <Icon icon={p.icon} size={20} /><span>{p.label}</span>{p.id === 'plan' && openCount > 0 && <span className="tb-badge">{openCount}</span>}
-            </button>
-          ))}
-        </nav>
+        <Navbar className="tabbar" aria-label="Pages">
+          <ButtonGroup fill variant="minimal">
+            {PAGES.map((p) => (
+              <Button key={p.id} icon={p.icon} active={tab === p.id} intent={tab === p.id ? Intent.PRIMARY : Intent.NONE} onClick={() => setTab(p.id)} aria-current={tab === p.id}>
+                {p.label}{p.id === 'plan' && openCount > 0 && <Tag round intent={Intent.DANGER} className="tab-badge">{openCount}</Tag>}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </Navbar>
 
         <CommandBar omni={omni} setOmni={setOmni} />
         <WelcomeDialog isOpen={welcome && !tourOn} onClose={() => { setWelcome(false); lsSet(STORE + '.welcomed', '1'); }} />
@@ -337,26 +340,25 @@ function WelcomeDialog({ isOpen, onClose }) {
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title="Crew Bus Copilot" icon="drive-time" className="welcome-dialog" canOutsideClickClose>
       <DialogBody>
-        <div className="eyebrow">Frankfurt Airport · crew transport</div>
-        <h2 className="sheet-title bp6-heading">Getting crews to their aircraft on time</h2>
-        <p className="tagline">The AI-first successor to call-by-call dispatch: the copilot plans every bus, the dispatcher stays in control.</p>
-        <p className="lead">Every day, dispatchers at Frankfurt send about 1,100 crew bus trips between the Crew Center and the aircraft, one phone call at a time. Crews arrive late, buses drive empty, and one late crew can delay a whole flight.</p>
-        <button className="video-teaser" onClick={() => { onClose(); setVideo(true); }}>
-          <span className="vt-play"><Icon icon="play" size={20} /></span>
-          <span><b>Watch the product tour</b><span className="bp6-text-muted">About 80 seconds, step by step</span></span>
-        </button>
-        <ol className="steps">
+        <H3>Getting crews to their aircraft on time</H3>
+        <p className={Classes.INTENT_PRIMARY + ' tagline'}>The AI-first successor to call-by-call dispatch: the copilot plans every bus, the dispatcher stays in control.</p>
+        <p className={Classes.RUNNING_TEXT}>Every day, dispatchers at Frankfurt send about 1,100 crew bus trips between the Crew Center and the aircraft, one phone call at a time. Crews arrive late, buses drive empty, and one late crew can delay a whole flight.</p>
+        <Card interactive compact className="video-teaser" onClick={() => { onClose(); setVideo(true); }}>
+          <Button intent={Intent.PRIMARY} icon="play" size="large" aria-label="Play the product tour" />
+          <span><b>Watch the product tour</b><br /><span className={Classes.TEXT_MUTED}>About 80 seconds, step by step</span></span>
+        </Card>
+        <CardList compact className="steps">
           {[['Crew tasks', 'Each crew that needs a bus, and when. Type a disruption in plain words, like “LH400 delayed 30 min”.'],
             ['Copilot plan', 'The copilot proposes a bus for every crew and explains why. The dispatcher accepts or overrules it in seconds.'],
             ['Live map', 'Watch the buses move across the apron, get alerts before a crew is late, and select anything for details.'],
             ['Results', 'Today’s dispatching next to the copilot on the same day: crews on time, empty kilometres, buses used.']].map(([h, p], i) => (
-            <li key={h}><span className="step-n">{i + 1}</span><div><b>{h}</b><p>{p}</p></div></li>
+            <Card key={h} className="step"><Tag round intent={Intent.PRIMARY}>{i + 1}</Tag><div><b>{h}</b><br /><span className={Classes.TEXT_MUTED}>{p}</span></div></Card>
           ))}
-        </ol>
-        <div className="facts compact">
-          {FRA_FACTS.items.slice(0, 2).concat(FRA_FACTS.brief).map((f) => <div className="fact" key={f.label}><div className="fact-v">{f.value}</div><div className="fact-l">{f.label}</div></div>)}
+        </CardList>
+        <div className="facts">
+          {FRA_FACTS.items.slice(0, 2).concat(FRA_FACTS.brief).map((f) => <Card compact key={f.label} className="fact"><div className="fact-v">{f.value}</div><div className={Classes.TEXT_MUTED}>{f.label}</div></Card>)}
         </div>
-        <p className="bp6-text-muted small">Demo with synthetic crew data on a schematic map of the real airport. Drivers appear only as IDs (D-01…). Planning use only, no performance monitoring of drivers. Press <KeyComboTag combo="mod+k" minimal /> or <KeyComboTag combo="/" minimal /> to search or type a disruption anywhere.</p>
+        <p className={Classes.TEXT_MUTED}>Demo with synthetic crew data on a schematic map of the real airport. Drivers appear only as IDs (D-01…). Planning use only, no performance monitoring of drivers. Press <KeyComboTag combo="mod+k" minimal /> or <KeyComboTag combo="/" minimal /> to search or type a disruption anywhere.</p>
       </DialogBody>
       <DialogFooter actions={<>
         <Button size="large" variant="outlined" icon="map" onClick={() => { onClose(); setTab('live'); }}>Explore on my own</Button>
@@ -378,7 +380,7 @@ function VideoDialog({ isOpen, onClose }) {
         <div className="chapters">
           {TOUR_CHAPTERS.map((c, i) => (
             <Button key={c.t} size="small" variant="minimal" onClick={() => seek(c.t)} className="chapter">
-              <span className="mono bp6-text-muted">{Math.floor(c.t / 60)}:{String(Math.floor(c.t % 60)).padStart(2, '0')}</span> {i ? i + '. ' : ''}{c.title}
+              <span className={Classes.MONOSPACE_TEXT + " " + Classes.TEXT_MUTED}>{Math.floor(c.t / 60)}:{String(Math.floor(c.t % 60)).padStart(2, '0')}</span> {i ? i + '. ' : ''}{c.title}
             </Button>
           ))}
         </div>

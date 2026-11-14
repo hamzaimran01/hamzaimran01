@@ -3,16 +3,14 @@
 Open `index.html` by double-clicking it. There is no server, no install and no network call. On first open, a short introduction explains the case.
 
 ## Built with Palantir Blueprint
-The UI is React 18 + [Palantir Blueprint](https://github.com/palantir/blueprint) v6 (`@blueprintjs/core`, `@blueprintjs/select`, `@blueprintjs/icons`), using:
-- **Navbar and Tabs** for page navigation
-- **Card** and **Section**, **HTMLTable**, **Tag** and **Callout**
-- **Button**, **SegmentedControl**, **Slider** and **Switch**
-- **Dialog**: welcome and video
-- **Alert**: reset confirmation
-- **Popover** and **Menu**: the alert center
-- **OverlayToaster**: pop-up alerts
-- **Omnibar**: the ⌘K command bar
-- **Tooltip** and **NonIdealState**, plus Blueprint's light and dark themes
+The UI is React 18 + [Palantir Blueprint](https://github.com/palantir/blueprint) v6 (`@blueprintjs/core`, `@blueprintjs/select`, `@blueprintjs/icons`, all published from that repository). Every screen is built from stock Blueprint components and styled with Blueprint's design tokens:
+- **Layout:** Navbar and Tabs, a bottom Navbar with ButtonGroup on phones, Section and SectionCard, Card and CardList
+- **Data and status:** HTMLTable, Tag and CompoundTag, Callout, ProgressBar, NonIdealState
+- **Inputs and controls:** Button, AnchorButton, SegmentedControl, Slider, Switch, TextArea, InputGroup, HTMLSelect
+- **Overlays:** Dialog, Alert, Popover and Menu, OverlayToaster, Omnibar, Tooltip
+- **Theme:** Blueprint typography classes and dark theme (`bp6-dark`)
+
+The only custom-drawn parts are the airport map, the timelines and the tour spotlight, because Blueprint has no components for these. They use Blueprint palette tokens.
 
 The bundle is prebuilt in `dist/`, so `index.html` works offline. To change the code:
 ```

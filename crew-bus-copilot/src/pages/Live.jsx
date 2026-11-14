@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useState } from 'react';
-import { AnchorButton, Button, Callout, Card, HTMLTable, InputGroup, Intent, NonIdealState, SegmentedControl, Slider, Tag } from '@blueprintjs/core';
+import { AnchorButton, Button, Callout, Card, Classes, CompoundTag, HTMLTable, InputGroup, Intent, NonIdealState, Section, SectionCard, SegmentedControl, Slider, Tag } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
 import { FraMap } from '../map.js';
 import { busNow, busOf, fmt, fmtSec, ids, inMin, RULES, shortLoc, statusOf, taskNow, taskOf, tids, why } from '../logic.js';
@@ -80,7 +80,7 @@ function Camera() {
   const links = (
     <div className="row gap wrap cam-links">
       <AnchorButton intent={Intent.PRIMARY} icon="video" endIcon="share" href="https://www.youtube.com/results?search_query=frankfurt+airport+live&sp=EgJAAQ%253D%253D" target="_blank" rel="noopener">Live Frankfurt streams now</AnchorButton>
-      <AnchorButton variant="outlined" className="cam-ghost" endIcon="share" href="https://www.windfinder.com/webcams/frankfurt" target="_blank" rel="noopener">Weather webcams near FRA</AnchorButton>
+      <AnchorButton variant="outlined" endIcon="share" href="https://www.windfinder.com/webcams/frankfurt" target="_blank" rel="noopener">Weather webcams near FRA</AnchorButton>
     </div>
   );
   const dockRow = (
@@ -105,12 +105,9 @@ function Camera() {
   }
   return (
     <div className="cam">
-      <div className="cam-hero bp6-dark">
-        <Tag intent={Intent.DANGER} icon="record" className="live-badge">LIVE</Tag>
-        <div className="cam-hero-t">See the airfield as it happens</div>
-        <p>Fraport has no official 24/7 public stream, but plane spotters broadcast live from the Frankfurt fence most days. Open the current streams, or dock one here so it sits next to your plan.</p>
-        {links}
-      </div>
+      <NonIdealState className="cam-empty" icon="video" title="See the airfield as it happens"
+        description="Fraport has no official 24/7 public stream, but plane spotters broadcast live from the Frankfurt fence most days. Open the current streams, or dock one here so it sits next to your plan."
+        action={links} />
       {dockRow}
       <p className="bp6-text-muted small cam-note">Streams are third-party and change daily. Shared links of this tool open them on YouTube; a local copy can play them inline.</p>
     </div>
@@ -244,17 +241,16 @@ export default function LivePage() {
 
       <div className="lv-counts">
         {[['planned', 'Planned'], ['enroute', 'Bus on the way'], ['boarding', 'Boarding'], ['onboard', 'On board'], ['done', 'Delivered'], ['late', 'Late']].map(([k, l]) => (
-          <span key={k} className="lv-count"><TaskStateTag k={k} label={l} /><b className="mono">{counts[k]}</b></span>
+          <CompoundTag key={k} leftContent={l} intent={k === 'late' ? Intent.DANGER : k === 'done' ? Intent.SUCCESS : k === 'boarding' ? Intent.WARNING : k === 'planned' ? Intent.NONE : Intent.PRIMARY} minimal={k !== 'late' || !counts[k]} round>{counts[k]}</CompoundTag>
         ))}
       </div>
 
       <div className="lv-grid">
-        <Card elevation={1} className="map-card">
-          <div className="map-top">
-            <Tag intent={Intent.DANGER} icon="record" className="live-badge">LIVE</Tag>
-            <SegmentedControl size="small" value={live.view} onValueChange={setView} options={[{ value: 'map', label: 'Live map', icon: 'map' }, { value: 'cam', label: 'Airfield camera', icon: 'video' }]} />
-            <span className="small bp6-text-muted map-note">{live.view === 'cam' ? 'Live video from plane spotters at the airfield' : 'Planned positions, not tracked vehicles · schematic, not to scale'}</span>
-          </div>
+        <Section elevation={1} className="map-card" icon={live.view === 'cam' ? 'video' : 'map'}
+          title={<span className="row gap"><Tag intent={Intent.DANGER} icon="record" className="live-badge">LIVE</Tag>{live.view === 'cam' ? 'Airfield camera' : 'Apron map'}</span>}
+          subtitle={live.view === 'cam' ? 'Live video from plane spotters at the airfield' : 'Planned positions, not tracked vehicles · schematic, not to scale'}
+          rightElement={<SegmentedControl size="small" value={live.view} onValueChange={setView} options={[{ value: 'map', label: 'Map', icon: 'map' }, { value: 'cam', label: 'Camera', icon: 'video' }]} />}>
+          <SectionCard>
           {live.view === 'cam' ? <Camera /> : (
             <>
               <div className={'map-wrap' + Object.keys(layers).map((k) => (layers[k] ? '' : ' hide-' + k)).join('')}
@@ -262,7 +258,7 @@ export default function LivePage() {
                 <StaticMap />
                 <MapOverlay p={p} t={t} selBus={selBus} onSelect={select} />
               </div>
-              <div className="map-layers" role="group" aria-label="Map layers"><span className="small bp6-text-muted">Layers</span>
+              <div className="map-layers" role="group" aria-label="Map layers"><span className={Classes.TEXT_MUTED}>Layers</span>
                 {[['airport', 'Airport', 'airplane'], ['routes', 'Routes', 'route'], ['labels', 'Labels', 'tag'], ['pins', 'Waiting crews', 'people']].map(([k, l, ic]) => (
                   <Button key={k} size="small" icon={ic} variant={layers[k] ? 'solid' : 'outlined'} intent={layers[k] ? Intent.PRIMARY : Intent.NONE} aria-pressed={layers[k]}
                     onClick={() => set({ layers: { ...layers, [k]: !layers[k] } })}>{l}</Button>
@@ -270,12 +266,13 @@ export default function LivePage() {
               </div>
             </>
           )}
-        </Card>
-        <Card elevation={1} className="inspector" id="lvInspector"><Inspector p={p} t={t} /></Card>
+          </SectionCard>
+        </Section>
+        <div className="inspector" id="lvInspector"><Section elevation={1} title="Details" icon="properties"><SectionCard><Inspector p={p} t={t} /></SectionCard></Section></div>
       </div>
 
-      <Card elevation={1} className="lv-board">
-        <div className="row between wrap"><h2 className="bp6-heading card-h">Drivers and buses</h2><span className="bp6-text-muted small">What each bus is doing now and what comes next</span></div>
+      <Section elevation={1} className="lv-board sec" title="Drivers and buses" icon="drive-time" subtitle="What each bus is doing now and what comes next">
+        <SectionCard>
         <div className="lv-row lv-axisrow"><div className="lv-info small bp6-text-muted">Bus · driver</div><div className="lv-track"><div className="tl-axis">{ticks}<span className="lv-nowlabel mono" style={{ left: nowPct }}>{fmt(t)}</span></div></div></div>
         {p.buses.map((b) => {
           const st = busNow(S, b, t), src = busOf(S, b.id);
@@ -291,12 +288,13 @@ export default function LivePage() {
             </div>
           );
         })}
-      </Card>
+        </SectionCard>
+      </Section>
 
-      <Card elevation={1}>
-        <div className="row between wrap"><h2 className="bp6-heading card-h">Crew tasks right now</h2><span className="bp6-text-muted small">Sorted by due time · ETA = at aircraft (DEP) or picked up (ARR)</span></div>
+      <Section elevation={1} className="sec" title="Crew tasks right now" icon="people" subtitle="Sorted by due time · ETA = at aircraft (DEP) or picked up (ARR)">
+        <SectionCard padded={false}>
         <div className="table-wrap">
-          <HTMLTable className="tbl lv-tbl" interactive compact>
+          <HTMLTable className="full-table lv-tbl" interactive compact>
             <thead><tr><th>Status</th><th>Task</th><th>Flight</th><th>Bus · driver</th><th>Route · people</th><th>Boards</th><th>ETA / due</th><th>Margin</th></tr></thead>
             <tbody>
               {taskRows.map(({ tk, a, s }) => {
@@ -317,8 +315,9 @@ export default function LivePage() {
             </tbody>
           </HTMLTable>
         </div>
-      </Card>
-      <p className="wc-inline small">Planning use only, no performance monitoring of drivers. The map shows the plan, not tracked vehicle positions.</p>
+        </SectionCard>
+      </Section>
+      <p className={Classes.TEXT_MUTED + ' wc-inline'}>Planning use only, no performance monitoring of drivers. The map shows the plan, not tracked vehicle positions.</p>
     </>
   );
 }

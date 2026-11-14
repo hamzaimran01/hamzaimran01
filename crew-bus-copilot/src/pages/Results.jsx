@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, HTMLTable, Icon, Intent, Section, SectionCard, Tag } from '@blueprintjs/core';
+import { Callout, Card, Classes, HTMLTable, Icon, Intent, Section, SectionCard, Tag } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
 import { FRA_FACTS } from '../data.js';
 import { Engine, fmt, ids, RULES } from '../logic.js';
@@ -31,17 +31,18 @@ export default function ResultsPage() {
       <PageIntro title="Results">
         The same morning planned two ways: by today’s dispatchers, call by call, and by the copilot. This is the comparison the head of operations needs before deciding on go-live after the 90-day shadow pilot.
       </PageIntro>
-      <Card elevation={2} className="hero-result">
+      <Callout intent={Intent.PRIMARY} icon="chart" className="hero-result sec" title="The same morning, two ways">
         <p className="headline">
           With the copilot, <b>{b.onTime} of {b.tasks}</b> crews arrive on time (today: {a.onTime}), with{' '}
           {emptyCut > 0 ? <b>{emptyCut}% less empty driving</b> : emptyCut < 0 ? <b>{-emptyCut}% more empty driving</b> : 'the same empty driving'}
           {b.busesUsed === a.busesUsed ? <>, using the same {b.busesUsed} buses.</> : <> and <b>{b.busesUsed}</b> buses instead of {a.busesUsed}.</>}
         </p>
-        <p className="bp6-text-muted small">{S.log.length ? 'Includes your disruptions: ' + S.log.map((l) => l.text).join('; ') + '.' : 'Original sample day, no disruptions.'} Both columns use the same driving times, boarding ({RULES.boarding} min) and drop-off ({RULES.dropoff} min). Kilometres assume {Math.round(RULES.kmPerMin * 60)} km/h on the apron.</p>
-      </Card>
-      <Card elevation={1}>
+        <p className={Classes.TEXT_MUTED}>{S.log.length ? 'Includes your disruptions: ' + S.log.map((l) => l.text).join('; ') + '.' : 'Original sample day, no disruptions.'} Both columns use the same driving times, boarding ({RULES.boarding} min) and drop-off ({RULES.dropoff} min). Kilometres assume {Math.round(RULES.kmPerMin * 60)} km/h on the apron.</p>
+      </Callout>
+      <Section title="Today’s dispatching vs copilot" icon="comparison" elevation={1} className="sec">
+        <SectionCard padded={false}>
         <div className="table-wrap">
-          <HTMLTable className="tbl compare" compact>
+          <HTMLTable className="full-table compare" compact>
             <thead><tr><th /><th>Today’s dispatching<div className="bp6-text-muted small">one run per phone call</div></th><th>Copilot<div className="bp6-text-muted small">including your overrides</div></th><th>Difference</th></tr></thead>
             <tbody>
               <MetricRow label="Crews on time" va={a.onTime + ' / ' + a.tasks} vb={b.onTime + ' / ' + b.tasks} na={a.onTime} nb={b.onTime} higherBetter of={a.tasks} />
@@ -57,8 +58,9 @@ export default function ResultsPage() {
             </tbody>
           </HTMLTable>
         </div>
-        {Object.keys(base.reassigned).length > 0 && <p className="small bp6-text-muted">Today’s column: {Object.keys(base.reassigned).map((k) => k + ' → ' + base.reassigned[k]).join(', ')} had no usable bus on record (added task or bus out of service), so they went to the first bus able to reach the pickup.</p>}
-      </Card>
+        {Object.keys(base.reassigned).length > 0 && <p className={Classes.TEXT_MUTED + " pad"}>Today’s column: {Object.keys(base.reassigned).map((k) => k + ' → ' + base.reassigned[k]).join(', ')} had no usable bus on record (added task or bus out of service), so they went to the first bus able to reach the pickup.</p>}
+        </SectionCard>
+      </Section>
       <div className="grid-2">
         <Section title="90-day shadow pilot" icon="endorsed" elevation={1} className="sec">
           <SectionCard>
@@ -71,7 +73,7 @@ export default function ResultsPage() {
         <Section title="Frankfurt Airport in numbers" icon="airplane" elevation={1} className="sec">
           <SectionCard>
             <div className="facts">
-              {FRA_FACTS.items.concat(FRA_FACTS.brief).map((f) => <div className="fact" key={f.label}><div className="fact-v">{f.value}</div><div className="fact-l">{f.label}</div><div className="fact-n bp6-text-muted">{f.note}</div></div>)}
+              {FRA_FACTS.items.concat(FRA_FACTS.brief).map((f) => <Card compact className="fact" key={f.label}><div className="fact-v">{f.value}</div><div>{f.label}</div><div className={Classes.TEXT_MUTED}>{f.note}</div></Card>)}
             </div>
             <p className="bp6-text-muted small">Sources: {FRA_FACTS.sources.map((s, i) => <React.Fragment key={s.url}>{i ? ' · ' : ''}<a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}</a></React.Fragment>)}. Crew tasks, buses and driving times in this demo are synthetic.</p>
           </SectionCard>
@@ -80,7 +82,7 @@ export default function ResultsPage() {
       <Section title="Task by task" icon="th" elevation={1} className="sec">
         <SectionCard padded={false}>
           <div className="table-wrap">
-            <HTMLTable className="tbl" compact striped>
+            <HTMLTable className="full-table" compact striped>
               <thead>
                 <tr><th rowSpan={2}>Task</th><th rowSpan={2}>Flight</th><th rowSpan={2}>Type</th><th rowSpan={2}>Due</th><th colSpan={3} className="grp">Today’s dispatching</th><th colSpan={3} className="grp">Copilot</th></tr>
                 <tr><th>Bus</th><th>Time</th><th>Late</th><th>Bus</th><th>Time</th><th>Late</th></tr>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Callout, Card, Collapse, HTMLSelect, Intent, Tag } from '@blueprintjs/core';
+import { Button, Callout, Card, CardList, Classes, Collapse, HTMLSelect, Intent, Section, SectionCard, Tag } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
 import { busOf, busOutLabel, fmt, ids, overruleOptions, RULES, shortLoc, statusOf, tids, why } from '../logic.js';
 import { BusChip, DirTag, Kpi, PageIntro } from '../ui.jsx';
@@ -32,11 +32,11 @@ function Overrule({ id }) {
   const [val, setVal] = useState(first ? first.bus : '');
   return (
     <Callout intent={Intent.WARNING} icon="swap-horizontal" compact className="overrule">
-      <label className="small" htmlFor="ovSel">Give {id} to</label>{' '}
+      <label htmlFor="ovSel">Give {id} to</label>{' '}
       <HTMLSelect id="ovSel" value={val} onChange={(e) => setVal(e.target.value)} options={opts.map((o) => ({ value: o.bus, label: o.label, disabled: !o.ok }))} />{' '}
       <Button size="small" intent={Intent.PRIMARY} disabled={!val} onClick={() => actions.overrule(id, val)}>Confirm</Button>{' '}
       <Button size="small" variant="minimal" onClick={() => setOpenOverrule(null)}>Cancel</Button>
-      <div className="bp6-text-muted small">The rest of the plan is re-optimised around your choice. The numbers show the effect on the whole plan.</div>
+      <div className={Classes.TEXT_MUTED}>The rest of the plan is re-optimised around your choice. The numbers show the effect on the whole plan.</div>
     </Callout>
   );
 }
@@ -61,8 +61,8 @@ export default function PlanPage() {
       <PageIntro title="Copilot plan">
         The copilot proposes a bus for every crew and says why. Check each proposal and <b>Accept</b> it, or <b>Overrule</b> it and pick another bus; the rest of the plan adjusts around your choice.
       </PageIntro>
-      {plan.unassigned.length > 0 && <Callout intent={Intent.DANGER} icon="error" className="mb">No bus can serve {plan.unassigned.join(', ')}. Check buses out of service or shift ends.</Callout>}
-      <Card elevation={1} className="summary">
+      {plan.unassigned.length > 0 && <Callout intent={Intent.DANGER} icon="error" className="sec">No bus can serve {plan.unassigned.join(', ')}. Check buses out of service or shift ends.</Callout>}
+      <Section title="Plan summary" icon="dashboard" elevation={1} className="summary sec"><SectionCard>
         <div className="kpis">
           <Kpi label="Crews on time" value={m.onTime} of={m.tasks} intent={m.lateTasks ? 'bad' : 'good'} />
           <Kpi label="Late minutes" value={m.lateMin} unit="min" intent={m.lateMin ? 'bad' : 'good'} />
@@ -71,43 +71,44 @@ export default function PlanPage() {
         </div>
         <div className="decision-bar">
           <div className="dbars" aria-hidden="true"><span className="dbar ok" style={{ width: counts.accepted / total * 100 + '%' }} /><span className="dbar warn" style={{ width: counts.overruled / total * 100 + '%' }} /></div>
-          <span className="small"><b>{counts.accepted}</b> accepted · <b>{counts.overruled}</b> overruled · <b>{counts.open}</b> to review</span>
+          <span><b>{counts.accepted}</b> accepted · <b>{counts.overruled}</b> overruled · <b>{counts.open}</b> to review</span>
           <Button intent={Intent.PRIMARY} icon="tick" disabled={!counts.open} onClick={actions.acceptAll}>Accept all on-time proposals</Button>
         </div>
         {S.lastChange && <Callout intent={Intent.PRIMARY} icon="exchange" compact className="changed-note">Last change: <span className="mono">{S.lastChange.text}</span>{changed.length ? '. Moved: ' + changed.join(', ') : ''}</Callout>}
         <Button variant="minimal" size="small" icon="manual" className="howto-btn" onClick={() => setHowto((h) => !h)} endIcon={howto ? 'chevron-up' : 'chevron-down'}>How to read this page</Button>
         <Collapse isOpen={howto}>
-          <div className="legend small"><span><i className="lg lg-empty" />Driving empty</span><span><i className="lg lg-wait" />Waiting for crew</span><span><i className="lg lg-dep" />Crew to aircraft (DEP)</span><span><i className="lg lg-arr" />Crew back from aircraft (ARR)</span><span><i className="lg lg-late" />Late</span><span><i className="lg lg-out" />Out of service</span></div>
-          <p className="bp6-text-muted small">Rule: crews ready within {RULES.shareWindow} min, going to stops at most {RULES.nearbyMax} min apart, may share a bus (max {RULES.capacity} seats, {RULES.maxStops} stops, nobody late). Each run goes to the bus with the lowest score: {RULES.latePenalty} × late minutes + empty minutes. Being late counts 40 times more than driving empty.</p>
+          <div className="legend"><span><i className="lg lg-empty" />Driving empty</span><span><i className="lg lg-wait" />Waiting for crew</span><span><i className="lg lg-dep" />Crew to aircraft (DEP)</span><span><i className="lg lg-arr" />Crew back from aircraft (ARR)</span><span><i className="lg lg-late" />Late</span><span><i className="lg lg-out" />Out of service</span></div>
+          <p className={Classes.TEXT_MUTED}>Rule: crews ready within {RULES.shareWindow} min, going to stops at most {RULES.nearbyMax} min apart, may share a bus (max {RULES.capacity} seats, {RULES.maxStops} stops, nobody late). Each run goes to the bus with the lowest score: {RULES.latePenalty} × late minutes + empty minutes. Being late counts 40 times more than driving empty.</p>
         </Collapse>
-      </Card>
+      </SectionCard></Section>
       <div className="tl-axis-wrap"><div className="tl-axis">{ticks}</div></div>
       {plan.buses.map((b) => {
         const src = busOf(S, b.id), out = busOutLabel(src);
         const empty = b.trips.reduce((s, tr) => s + tr.r.empty, 0);
         return (
-          <Card key={b.id} elevation={1} className="bus">
-            <div className="bus-head">
-              <div className="row gap wrap"><BusChip id={b.id} large intent={out ? Intent.DANGER : undefined} /><span className="bp6-text-muted small">Driver {b.driver} · starts at {b.start} · shift {src.shift}</span>{out && <Tag intent={Intent.DANGER} minimal>{out}</Tag>}</div>
-              <div className="row gap"><span className="bp6-text-muted small">{b.trips.length} run(s) · {empty} min empty</span><Button size="small" variant="minimal" icon="map" onClick={() => select('bus', b.id, 'live')}>Show on map</Button></div>
-            </div>
-            <div className="tl"><Timeline trips={b.trips} t0={t0} t1={t1} outFrom={src.outFrom} /></div>
-            {b.trips.length === 0 && <div className="assign idle bp6-text-muted small">{out ? out + '. No runs.' : 'No runs. Kept free as a reserve, which saves empty driving.'}</div>}
+          <Section key={b.id} elevation={1} className="bus sec" icon="drive-time"
+            title={<span className="row gap">{b.id}{out && <Tag intent={Intent.DANGER} minimal>{out}</Tag>}</span>}
+            subtitle={'Driver ' + b.driver + ' · starts at ' + b.start + ' · shift ' + src.shift + ' · ' + b.trips.length + ' run(s) · ' + empty + ' min empty'}
+            rightElement={<Button size="small" variant="minimal" icon="map" onClick={() => select('bus', b.id, 'live')}>Show on map</Button>}>
+            <SectionCard><Timeline trips={b.trips} t0={t0} t1={t1} outFrom={src.outFrom} /></SectionCard>
+            <SectionCard padded={false}>
+              {b.trips.length === 0 ? <p className={Classes.TEXT_MUTED + ' pad'}>{out ? out + '. No runs.' : 'No runs. Kept free as a reserve, which saves empty driving.'}</p> : (
+              <CardList bordered={false} compact>
             {b.trips.map((tr) => tr.tasks.map((t) => {
               const a = plan.byTask[t.id], st = statusOf(S, plan, t.id), res = a.res;
               const times = t.dir === 'DEP' ? 'boards ' + fmt(res.pickupAt) + ' · at aircraft ' + fmt(res.doneAt) : 'picked up ' + fmt(res.pickupAt) + ' · at Crew Ctr ' + fmt(res.doneAt);
               const isChanged = changed.includes(t.id);
               return (
-                <div key={t.id} className={'assign ' + (res.late ? 'is-late ' : '') + (isChanged ? 'is-changed ' : '') + (flash.changed.includes(t.id) ? 'flash ' : '') + 'st-' + st} style={{ '--i': n++ }}>
+                <Card key={t.id} className={'assign ' + (res.late ? 'is-late ' : '') + (isChanged ? 'is-changed ' : '') + (flash.changed.includes(t.id) ? 'flash ' : '') + 'st-' + st} style={{ '--i': n++ }}>
                   <div className="a-main">
-                    <div className="a-head"><a role="button" className="mono strong" onClick={() => select('task', t.id, 'live')}>{t.id}</a> <span className="mono">{t.flight}</span> <DirTag dir={t.dir} />
-                      <span className="bp6-text-muted">{t.crew} · {t.pax} people · {shortLoc(t.from)} → {shortLoc(t.to)}</span></div>
-                    <div className="a-time"><span className="mono">{times}</span> <span className={'mono ' + (res.late ? 'bad' : 'bp6-text-muted')}>due {fmt(t.due)}{res.late ? ' · ' + res.late + ' min late' : ' · on time'}</span>
+                    <div className="a-head"><a role="button" className={Classes.MONOSPACE_TEXT} onClick={() => select('task', t.id, 'live')}><b>{t.id}</b></a> <span className={Classes.MONOSPACE_TEXT}>{t.flight}</span> <DirTag dir={t.dir} />
+                      <span className={Classes.TEXT_MUTED}>{t.crew} · {t.pax} people · {shortLoc(t.from)} → {shortLoc(t.to)}</span></div>
+                    <div className="a-time"><span className={Classes.MONOSPACE_TEXT}>{times}</span> <span className={Classes.MONOSPACE_TEXT + ' ' + (res.late ? Classes.INTENT_DANGER : Classes.TEXT_MUTED)}>due {fmt(t.due)}{res.late ? ' · ' + res.late + ' min late' : ' · on time'}</span>
                       {isChanged && <Tag minimal intent={Intent.PRIMARY}>changed</Tag>}
                       {st === 'accepted' && <Tag intent={Intent.SUCCESS} minimal icon="tick" className={flash.accepted === t.id ? 'pop' : ''}>Accepted</Tag>}
                       {st === 'overruled' && <Tag intent={Intent.WARNING} minimal icon="swap-horizontal">Overruled → {a.bus}</Tag>}
                     </div>
-                    <div className="why"><Tag minimal intent={Intent.PRIMARY} className="why-label">Why</Tag>{why(S, plan, t.id)}</div>
+                    <div className="why"><Tag minimal intent={Intent.PRIMARY}>WHY</Tag> {why(S, plan, t.id)}</div>
                     {openOverrule === t.id && <Overrule id={t.id} />}
                   </div>
                   <div className="a-actions">
@@ -115,13 +116,15 @@ export default function PlanPage() {
                       : st === 'accepted' ? <><Button size="small" variant="minimal" onClick={() => actions.unaccept(t.id)}>Undo</Button><Button size="small" variant="outlined" onClick={() => setOpenOverrule(t.id)}>Overrule</Button></>
                         : <><Button size="small" intent={Intent.PRIMARY} icon="tick" data-accept={t.id} onClick={() => actions.accept(t.id)}>Accept</Button><Button size="small" variant="outlined" onClick={() => setOpenOverrule(t.id)}>Overrule</Button></>}
                   </div>
-                </div>
+                </Card>
               );
             }))}
-          </Card>
+              </CardList>)}
+            </SectionCard>
+          </Section>
         );
       })}
-      <p className="wc-inline small">Planning use only, no performance monitoring of drivers.</p>
+      <p className={Classes.TEXT_MUTED + " wc-inline"}>Planning use only, no performance monitoring of drivers.</p>
     </>
   );
 }

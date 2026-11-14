@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Card, Classes, H1, Icon, Intent, ProgressBar, Tag } from '@blueprintjs/core';
 import { useApp } from './App.jsx';
 import { freshScenario, statusOf } from './logic.js';
 
@@ -120,20 +120,20 @@ export default function Tour() {
       <div className="tour-block" />
       <div className="tour-spot" ref={spot} />
       {sc.card && (
-        <div className="tour-card bp6-dark">
+        <div className={'tour-card ' + Classes.DARK}>
           <div className="tc-in" key={idx}>
-            <div className="tc-icon"><Icon icon="drive-time" size={40} /></div>
-            <div className="eyebrow">{sc.eyebrow}</div>
-            <h2>{sc.title}</h2>
-            <p>{sc.sub}</p>
+            <Icon icon="drive-time" size={56} intent={Intent.PRIMARY} />
+            <Tag minimal size="large" round>{sc.eyebrow}</Tag>
+            <H1>{sc.title}</H1>
+            <p className={Classes.RUNNING_TEXT + ' ' + Classes.TEXT_LARGE}>{sc.sub}</p>
             {sc.end && <div className="row gap wrap tc-actions"><Button size="large" intent={Intent.PRIMARY} icon="map" onClick={() => end('live')}>Try it yourself</Button><Button size="large" variant="outlined" icon="refresh" onClick={() => play(0)}>Watch again</Button></div>}
           </div>
         </div>
       )}
-      <div className={'tour-bar' + (sc.card ? ' bp6-dark' : '')} role="dialog" aria-label="Product tour" aria-live="polite">
-        <div className="tour-prog">{SCENES.map((s, i) => <span key={i} className={'tp' + (i < idx ? ' done' : i === idx ? ' cur' : '')}><i key={i === idx ? 'c' + idx : 'n'} style={i === idx ? { animationDuration: (s.dur + 2500) / 1000 + 's' } : undefined} /></span>)}</div>
+      <Card elevation={4} className={'tour-bar' + (sc.card ? ' ' + Classes.DARK : '')} role="dialog" aria-label="Product tour" aria-live="polite">
+        <ProgressBar value={(idx + 1) / SCENES.length} intent={Intent.PRIMARY} animate={!paused} stripes={!paused} className="tour-prog" />
         <div className="tour-row">
-          <div className="tour-cap" key={idx}>{!sc.card && <><div className="eyebrow">{sc.eyebrow}</div><div className="tour-title">{sc.title}</div><div className="tour-sub">{sc.sub}</div></>}</div>
+          <div className="tour-cap" key={idx}>{!sc.card ? <><Tag minimal intent={Intent.PRIMARY}>{sc.eyebrow}</Tag><div className="tour-title">{sc.title}</div><div className={Classes.TEXT_MUTED}>{sc.sub}</div></> : <span className={Classes.TEXT_MUTED}>Step {idx + 1} of {SCENES.length}</span>}</div>
           <div className="tour-ctl">
             <Button variant="minimal" icon="chevron-left" aria-label="Previous step" disabled={idx === 0} onClick={() => play(idx - 1)} />
             <Button variant="minimal" icon={paused ? 'play' : 'pause'} aria-label={paused ? 'Play' : 'Pause'} onClick={() => setPaused((p) => !p)} />
@@ -141,7 +141,7 @@ export default function Tour() {
             <Button variant="minimal" onClick={() => end()}>Exit tour</Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
