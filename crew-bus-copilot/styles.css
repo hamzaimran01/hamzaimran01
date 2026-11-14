@@ -136,6 +136,7 @@ main { max-width: 1280px; margin: 0 auto; padding-block: 20px 12px; padding-left
 
 /* ---------- buttons ---------- */
 .btn { font: inherit; font-size: 15px; font-weight: 600; border: 0; background: var(--fill); color: var(--accent); padding: 0 16px; min-height: 40px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: transform .12s var(--ease), background .2s, opacity .2s; -webkit-tap-highlight-color: transparent; }
+a.btn { text-decoration: none; }
 .btn:hover:not([disabled]) { background: var(--fill-2); }
 .btn:active:not([disabled]), .icon-btn:active, .chip:active, .play-btn:active, .seg-ctl button:active { transform: scale(.96); }
 .btn.primary { background: var(--accent); color: var(--on-accent); }
@@ -485,6 +486,96 @@ select { font: 14px var(--mono); padding: 6px 8px; min-height: 34px; border-radi
 .toast .ic { color: var(--good); }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .tabbar { display: none; }
+
+
+/* ---------- header tour button ---------- */
+.tour-btn { display: inline-flex; align-items: center; gap: 5px; border: 0; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; min-height: 32px; padding: 0 12px 0 10px; border-radius: 16px; cursor: pointer; transition: transform .12s, background .2s; }
+.tour-btn .ic { width: 14px; height: 14px; fill: currentColor; stroke: none; }
+.tour-btn:hover { background: var(--fill-2); }
+.tour-btn:active { transform: scale(.96); }
+.toast.err .ic { color: var(--bad); }
+
+/* ---------- airfield camera ---------- */
+.map-top .seg-ctl button { display: inline-flex; align-items: center; gap: 5px; }
+.map-top .seg-ctl .ic { width: 15px; height: 15px; }
+.map-note { flex: 1; min-width: 160px; }
+.cam { display: grid; gap: 14px; }
+.cam-hero { position: relative; border-radius: 12px; padding: 28px 24px; color: #fff; overflow: hidden; background: radial-gradient(120% 90% at 20% 10%, #2b5876 0%, #0f2027 55%, #070b0f 100%); min-height: 300px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+.cam-hero::before { content: ""; position: absolute; inset: auto -10% 18% -10%; height: 46px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.75) 0 26px, transparent 26px 52px); opacity: .18; transform: perspective(300px) rotateX(60deg); }
+.cam-hero .live-badge { position: absolute; top: 16px; left: 16px; }
+.cam-hero-t { font-size: 24px; font-weight: 700; letter-spacing: -.02em; position: relative; }
+.cam-hero p { margin: 0; max-width: 60ch; color: rgba(255,255,255,.8); font-size: 14px; position: relative; }
+.cam-hero .btn.tinted { background: rgba(255,255,255,.16); color: #fff; }
+.cam-links { position: relative; }
+.cam-links .ic { width: 15px; height: 15px; }
+.cam-frame { position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+.cam-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; z-index: 1; }
+.cam-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: rgba(255,255,255,.75); padding: 20px; font-size: 13px; }
+.cam-dock input { flex: 1; min-width: 0; font: 14px var(--font); padding: 0 12px; min-height: 36px; border-radius: 9px; border: 1px solid transparent; background: var(--fill); color: var(--text); }
+.cam-dock input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.cam-dock label { display: block; margin-bottom: 6px; color: var(--muted); }
+.cam-note { margin: 0; }
+
+/* ---------- welcome additions & video ---------- */
+.tagline { font-size: 15px; color: var(--accent); font-weight: 600; margin: -4px 0 14px; }
+.video-teaser { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; text-align: left; cursor: pointer; font: inherit; color: var(--text); padding: 12px; border-radius: 14px; margin: 0 0 16px; background: linear-gradient(120deg, var(--accent-soft), var(--info-soft)); transition: transform .15s var(--ease); }
+.video-teaser:hover { transform: translateY(-1px); }
+.video-teaser:active { transform: scale(.99); }
+.video-teaser > span:last-child { display: grid; }
+.vt-play { width: 46px; height: 46px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0, 122, 255, .35); }
+.vt-play .ic { fill: currentColor; stroke: none; width: 18px; height: 18px; margin-left: 2px; }
+.sheet-wide { width: min(980px, 100%); }
+.video-frame { border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; max-width: 100%; }
+.video-frame video { width: 100%; height: 100%; display: block; }
+.chapters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chapter { border: 0; background: var(--fill); color: var(--text); font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 9px; cursor: pointer; display: inline-flex; gap: 8px; transition: background .15s; }
+.chapter:hover { background: var(--accent-soft); color: var(--accent); }
+.chapter .mono { color: var(--muted); }
+
+/* ---------- interactive tour ---------- */
+.tour { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+.tour-block { position: absolute; inset: 0; pointer-events: auto; }
+.tour-spot { position: fixed; left: 0; top: 0; border-radius: 16px; box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .5), 0 0 0 3px var(--accent), 0 0 30px 6px rgba(0, 122, 255, .45); transition: transform .55s var(--ease), width .55s var(--ease), height .55s var(--ease), opacity .3s; opacity: 0; pointer-events: none; }
+.tour.is-card .tour-spot { opacity: 0 !important; }
+.tour-card { position: absolute; inset: 0; display: none; place-items: center; padding: 24px; background: radial-gradient(120% 120% at 15% 10%, #1f6fff 0%, #3a2fbf 45%, #0b0b1e 100%); color: #fff; pointer-events: auto; }
+.tour.is-card .tour-card { display: grid; animation: fadeIn .5s var(--ease); }
+.tc-in { max-width: 760px; text-align: center; display: grid; justify-items: center; gap: 14px; animation: sheetIn .7s var(--spring); }
+.tc-in .eyebrow { color: rgba(255, 255, 255, .7); }
+.tc-in h2 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; letter-spacing: -.035em; line-height: 1.05; }
+.tc-in p { margin: 0; font-size: clamp(16px, 1.8vw, 20px); color: rgba(255, 255, 255, .82); max-width: 56ch; }
+.tc-icon { width: 76px; height: 76px; border-radius: 20px; background: linear-gradient(160deg, #5aaaff, #0060df); display: grid; place-items: center; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); }
+.tc-icon .ic { width: 44px; height: 44px; stroke: #fff; }
+.tc-actions { justify-content: center; margin-top: 8px; }
+.tc-ghost { background: rgba(255, 255, 255, .16); color: #fff; }
+.tour-bar { position: absolute; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(820px, calc(100vw - 32px)); z-index: 96; pointer-events: auto; background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px); color: var(--text); border-radius: 20px; padding: 12px 14px 14px 20px; box-shadow: var(--shadow-lg); border: .5px solid var(--border); }
+.tour.is-card .tour-bar { background: rgba(0, 0, 0, .35); color: #fff; border-color: rgba(255, 255, 255, .15); }
+.tour.is-card .tour-bar .icon-btn, .tour.is-card .tour-x { color: #fff; }
+.tour-prog { display: flex; gap: 4px; margin-bottom: 10px; }
+.tp { flex: 1; height: 3px; border-radius: 2px; background: var(--fill-2); overflow: hidden; }
+.tour.is-card .tp { background: rgba(255, 255, 255, .25); }
+.tp i { display: block; height: 100%; width: 0; background: var(--accent); }
+.tour.is-card .tp i { background: #fff; }
+.tp.done i { width: 100%; }
+.tp.cur i { animation: tpFill linear forwards; }
+.tour.paused .tp.cur i { animation-play-state: paused; }
+.tour-row { display: flex; align-items: center; gap: 12px; }
+.tour-cap { flex: 1; min-width: 0; animation: fadeUp .45s var(--ease); }
+.tour-title { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.tour-sub { font-size: 14.5px; color: var(--muted); margin-top: 2px; }
+.tour-ctl { display: flex; align-items: center; gap: 2px; flex-shrink: 0; margin-left: auto; }
+.tour-pp .ic { fill: currentColor; stroke: none; }
+body.touring .alert-stack { z-index: 85; }
+body.touring .tabbar { z-index: 30; }
+@keyframes tpFill { from { width: 0; } to { width: 100%; } }
+@media (max-width: 720px) {
+  .tour-btn span { display: none; }
+  .tour-btn { width: 36px; padding: 0; justify-content: center; }
+  .tour-bar { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 10px 10px 12px 14px; }
+  .tour-row { flex-direction: column; align-items: stretch; }
+  .tour-title { font-size: 18px; }
+  .tour-ctl { margin-left: 0; justify-content: space-between; }
+  .cam-hero { min-height: 260px; padding: 22px 16px; }
+}
 
 /* ---------- motion ---------- */
 @keyframes viewIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

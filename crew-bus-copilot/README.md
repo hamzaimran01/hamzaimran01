@@ -13,6 +13,14 @@ Open `index.html` by double-clicking it. There is no server, no install and no n
    Selecting something highlights it everywhere: on the map, in the timeline and in the table.
 4. **Results**: today's dispatching (the `dispatcher_bus` column) next to the copilot on the same day, with a plain-language headline and public Frankfurt Airport figures (sources cited).
 
+## Product tour
+- **Video guide** (`tour.mp4`, 81 s, with chapters): opens from the **Tour** button in the header or the welcome sheet. It is a pitch-style, step-by-step walkthrough: the problem, tasks, a typed disruption, explained proposals, accepting, the live map, details, alerts, results.
+- **Interactive tour**: the same story played live inside the app with a spotlight and captions, using pause, back/next, exit and keyboard (space, ←/→, esc). Your own data is set aside during the tour and restored afterwards.
+- The video was recorded from the interactive tour with Playwright and encoded with ffmpeg, so it always shows the real product.
+
+## Airfield camera
+Live map → **Airfield camera**. Fraport runs no official 24/7 public stream, so this view links to the live Frankfurt plane-spotter streams on YouTube and to weather webcams near FRA. You can also dock a stream link of your choice. A docked stream plays inline when `index.html` is opened locally; shared artifact links can't embed outside video and open it on YouTube instead.
+
 ## Across the app
 - **⌘K / Ctrl+K or `/`** opens a command bar: search tasks, flights and buses, jump to pages, or type a disruption to apply it.
 - **Alerts**: pop-up banners and an alert center (bell) for crews that will be late, tight connections (≤ 1 min spare), buses going out of service, missing buses, and plan updates. Each alert has a "View" button that selects the item on the map. Pop-ups can be switched off.

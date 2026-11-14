@@ -72,12 +72,15 @@
       x: '<path d="M6 6l12 12M18 6 6 18"/>',
       warn: '<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".7"/>',
       info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r=".7"/>',
-      check: '<path d="m5 12 5 5 9-10"/>'
+      check: '<path d="m5 12 5 5 9-10"/>',
+      video: '<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3z"/>',
+      ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+      spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>'
     };
     return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || '') + '</svg>';
   }
   function hud(msg, kind) {
-    var el = $('#toast'); el.innerHTML = icon(kind === 'ok' ? 'check' : 'info') + '<span>' + esc(msg) + '</span>';
+    var el = $('#toast'); el.innerHTML = icon(kind === 'ok' ? 'check' : kind === 'err' ? 'warn' : 'info') + '<span>' + esc(msg) + '</span>'; el.classList.toggle('err', kind === 'err');
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     clearTimeout(hud._t); hud._t = setTimeout(function () { el.classList.remove('show'); }, 2400);
   }
@@ -453,7 +456,7 @@
     var emptyCut = a.empty ? Math.round((a.empty - b.empty) / a.empty * 100) : 0;
     var headline = 'With the copilot, <b>' + b.onTime + ' of ' + b.tasks + '</b> crews arrive on time (today: ' + a.onTime + '), with ' +
       (emptyCut > 0 ? '<b>' + emptyCut + '% less empty driving</b>' : emptyCut < 0 ? '<b>' + (-emptyCut) + '% more empty driving</b>' : 'the same empty driving') +
-      ' and <b>' + b.busesUsed + '</b> buses instead of ' + a.busesUsed + '.';
+      (b.busesUsed === a.busesUsed ? ', using the same ' + b.busesUsed + ' buses.' : ' and <b>' + b.busesUsed + '</b> buses instead of ' + a.busesUsed + '.');
     var rows = [
       metricRow('Crews on time', a.onTime + ' / ' + a.tasks, b.onTime + ' / ' + b.tasks, a.onTime, b.onTime, true, a.tasks),
       metricRow('Crew members on time', a.paxOnTime + ' / ' + a.pax, b.paxOnTime + ' / ' + b.pax, a.paxOnTime, b.paxOnTime, true, a.pax),
@@ -508,7 +511,7 @@
   }
 
   /* ================= tab 3: live ================= */
-  var L = { t: null, playing: false, speed: 10, mode: 'sim', source: 'copilot', raf: null, last: 0, slowAt: 0, cache: {}, built: false };
+  var L = { t: null, playing: false, speed: 10, mode: 'sim', source: 'copilot', raf: null, last: 0, slowAt: 0, cache: {}, built: false, view: lsGet(STORE + '.view') === 'cam' ? 'cam' : 'map' };
   function livePlan() { return L.source === 'today' ? base : plan; }
   function liveRange(p) {
     var a = [];
@@ -588,12 +591,14 @@
       '<div id="lvCounts" class="lv-counts"></div>' +
       '<div class="lv-grid">' +
         '<section class="card map-card">' +
-          '<div class="map-top"><span class="live-badge"><i></i>LIVE</span><span class="small muted">Planned positions, not tracked vehicles · schematic map, not to scale</span></div>' +
-          '<div class="map-wrap' + Object.keys(layers).map(function (k) { return layers[k] ? '' : ' hide-' + k; }).join('') + '" id="mapWrap">' + FraMap.staticSvg(p.buses.map(function (b) { return b.id; })) + '</div>' +
+          '<div class="map-top"><span class="live-badge"><i></i>LIVE</span>' +
+            '<div class="seg-ctl sm" role="group" aria-label="View"><button class="' + (L.view !== 'cam' ? 'on' : '') + '" data-action="mapView" data-view="map">' + icon('map') + ' Live map</button><button class="' + (L.view === 'cam' ? 'on' : '') + '" data-action="mapView" data-view="cam">' + icon('video') + ' Airfield camera</button></div>' +
+            '<span class="small muted map-note">' + (L.view === 'cam' ? 'Live video from plane spotters at the airfield' : 'Planned positions, not tracked vehicles · schematic, not to scale') + '</span></div>' +
+          (L.view === 'cam' ? camHTML() : '<div class="map-wrap' + Object.keys(layers).map(function (k) { return layers[k] ? '' : ' hide-' + k; }).join('') + '" id="mapWrap">' + FraMap.staticSvg(p.buses.map(function (b) { return b.id; })) + '</div>' +
           '<div class="map-layers" role="group" aria-label="Map layers"><span class="small muted">Layers</span>' +
             [['airport', 'Airport'], ['routes', 'Routes'], ['labels', 'Labels'], ['pins', 'Waiting crews']].map(function (l) {
               return '<button class="chip-toggle' + (layers[l[0]] ? ' on' : '') + '" data-action="layer" data-layer="' + l[0] + '" aria-pressed="' + layers[l[0]] + '">' + l[1] + '</button>';
-            }).join('') + '</div>' +
+            }).join('') + '</div>') +
         '</section>' +
         '<aside class="card inspector" id="lvInspector" aria-live="polite"></aside>' +
       '</div>' +
@@ -819,6 +824,9 @@
     });
     [['Play or pause the replay', function () { showTab('live'); L.mode = 'sim'; L.playing = !L.playing; renderLive(); ensureLoop(); }, 'play'],
      ['Show the introduction', function () { openWelcome(); }, 'help'],
+     ['Watch the product tour (video)', function () { openVideo(); }, 'video'],
+     ['Run the interactive product tour', function () { startTour(); }, 'spark'],
+     ['Open the airfield camera', function () { L.view = 'cam'; lsSet(STORE + '.view', 'cam'); showTab('live'); renderLive(); ensureLoop(); }, 'video'],
      ['Turn pop-up alerts ' + (A.popups ? 'off' : 'on'), function () { A.popups = !A.popups; lsSet(STORE + '.popups', A.popups ? 'on' : 'off'); hud('Pop-up alerts ' + (A.popups ? 'on' : 'off'), 'ok'); }, 'bell']
     ].forEach(function (a) { if (!ql || a[0].toLowerCase().indexOf(ql) >= 0) items.push({ ic: a[2], title: a[0], sub: 'Action', run: a[1] }); });
     K.items = items.slice(0, 12); K.idx = Math.min(K.idx, Math.max(0, K.items.length - 1));
@@ -835,6 +843,8 @@
       '<div class="sheet-grabber"></div>' +
       '<div class="eyebrow">Frankfurt Airport · crew transport</div>' +
       '<h2 class="sheet-title">Getting crews to their aircraft on time</h2>' +
+      '<p class="tagline">The AI-first successor to call-by-call dispatch: the copilot plans every bus, the dispatcher stays in control.</p>' +
+      '<button class="video-teaser" data-action="video"><span class="vt-play">' + icon('play') + '</span><span><b>Watch the product tour</b><span class="muted small">About 80 seconds, step by step</span></span></button>' +
       '<p class="lead">Every day, dispatchers at Frankfurt send about 1,100 crew bus trips between the Crew Center and the aircraft, one phone call at a time. Crews arrive late, buses drive empty, and one late crew can delay a whole flight.</p>' +
       '<ol class="steps">' +
         '<li><span class="step-n">1</span><div><b>Crew tasks</b><p>Each crew that needs a bus, and when. Type a disruption in plain words, like “LH400 delayed 30 min”.</p></div></li>' +
@@ -844,7 +854,7 @@
       '</ol>' +
       '<div class="facts compact">' + FRA_FACTS.items.slice(0, 2).concat(FRA_FACTS.brief).map(function (f) { return '<div class="fact"><div class="fact-v">' + f.value + '</div><div class="fact-l">' + f.label + '</div></div>'; }).join('') + '</div>' +
       '<p class="muted small">Demo with synthetic crew data on a schematic map of the real airport. Drivers appear only as IDs (D-01…). Planning use only, no performance monitoring of drivers. Press <kbd>⌘</kbd> <kbd>K</kbd> or <kbd>/</kbd> to search or type a disruption anywhere.</p>' +
-      '<div class="row gap wrap sheet-actions"><button class="btn primary lg" data-action="welcomeGo" data-tab="live">' + icon('map') + ' Watch the live map</button><button class="btn tinted lg" data-action="welcomeGo" data-tab="input">Start with the tasks</button></div>';
+      '<div class="row gap wrap sheet-actions"><button class="btn primary lg" data-action="tourStart">' + icon('spark') + ' Take the interactive tour</button><button class="btn tinted lg" data-action="welcomeGo" data-tab="live">' + icon('map') + ' Explore on my own</button></div>';
     s.hidden = false;
     setTimeout(function () { var b = s.querySelector('.btn.primary'); if (b) b.focus(); }, 30);
   }
@@ -898,6 +908,14 @@
       if (e.key === 'Enter') { e.preventDefault(); runPalette(K.idx); return; }
       return;
     }
+    if (T.on) {
+      if (e.key === 'Escape') { endTour(); return; }
+      if (e.key === ' ') { e.preventDefault(); T.paused = !T.paused; renderTourBar(); return; }
+      if (e.key === 'ArrowRight') { tourNext(); return; }
+      if (e.key === 'ArrowLeft') { if (T.idx > 0) playScenes(T.idx - 1); return; }
+      return;
+    }
+    if (!$('#videoSheet').hidden && e.key === 'Escape') { closeVideo(); return; }
     if (!$('#welcome').hidden && e.key === 'Escape') { closeWelcome(); return; }
     if (e.key === 'Escape') { if (A.open) toggleAlertCenter(false); else if (sel) select(null); return; }
     if (typing) return;
@@ -917,6 +935,7 @@
     var ki = e.target.closest('.k-item'); if (ki) { runPalette(+ki.dataset.k); return; }
     if (e.target.id === 'palette') { closePalette(); return; }
     if (e.target.id === 'welcome') { closeWelcome(); return; }
+    if (e.target.id === 'videoSheet') { closeVideo(); return; }
     if (A.open && !e.target.closest('#alertPanel') && !e.target.closest('#bellBtn')) toggleAlertCenter(false);
     var el = e.target.closest('[data-action],[data-goto],[data-tab-btn],[data-select]');
     if (!el) return;
@@ -964,6 +983,21 @@
         el.classList.toggle('on', L.layers[k]); el.setAttribute('aria-pressed', L.layers[k]);
         $('#mapWrap').classList.toggle('hide-' + k, !L.layers[k]); break;
       case 'deselect': select(null); break;
+      case 'mapView': L.view = el.dataset.view; lsSet(STORE + '.view', L.view); renderLive(); ensureLoop(); break;
+      case 'camDock':
+        var cid = ytId($('#camInput').value);
+        if (!cid) { hud('That doesn’t look like a YouTube link. Paste the link of a live stream.', 'err'); break; }
+        lsSet(STORE + '.cam', cid); renderLive(); ensureLoop(); hud('Stream docked', 'ok'); break;
+      case 'camClear': lsSet(STORE + '.cam', ''); renderLive(); ensureLoop(); break;
+      case 'tourStart': closeWelcome(); closeVideo(); startTour(); break;
+      case 'tourPause': T.paused = !T.paused; renderTourBar(); break;
+      case 'tourNext': tourNext(); break;
+      case 'tourPrev': if (T.idx > 0) playScenes(T.idx - 1); break;
+      case 'tourEnd': endTour(); break;
+      case 'tourTry': endTour(); showTab('live'); break;
+      case 'video': closeWelcome(); openVideo(); break;
+      case 'videoClose': closeVideo(); break;
+      case 'seek': var v = $('#tourVideo'); if (v) { v.currentTime = +el.dataset.t; v.play().catch(function () {}); } break;
       case 'bell': toggleAlertCenter(); break;
       case 'alertsClear': A.list = []; A.unread = 0; renderBell(false); renderAlertCenter(); break;
       case 'alertView':
@@ -979,6 +1013,140 @@
       case 'welcomeGo': closeWelcome(); showTab(el.dataset.tab); break;
     }
   });
+
+  /* ================= airfield camera ================= */
+  function ytId(u) {
+    u = String(u || '').trim();
+    var m = u.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|live\/|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : (/^[A-Za-z0-9_-]{11}$/.test(u) ? u : null);
+  }
+  function camHTML() {
+    var id = lsGet(STORE + '.cam');
+    var find = '<div class="row gap wrap cam-links">' +
+      '<a class="btn primary small-btn" href="https://www.youtube.com/results?search_query=frankfurt+airport+live&amp;sp=EgJAAQ%253D%253D" target="_blank" rel="noopener">' + icon('video') + ' Live Frankfurt streams now ' + icon('ext') + '</a>' +
+      '<a class="btn tinted small-btn" href="https://www.windfinder.com/webcams/frankfurt" target="_blank" rel="noopener">Weather webcams near FRA ' + icon('ext') + '</a></div>';
+    var dock = '<div class="cam-dock"><label class="small" for="camInput">Dock a stream here</label><div class="composer"><input id="camInput" type="url" placeholder="Paste a YouTube live link, e.g. https://www.youtube.com/watch?v=…" value="">' +
+      '<button class="btn small-btn primary" data-action="camDock">Dock</button>' + (id ? '<button class="btn small-btn plain" data-action="camClear">Remove</button>' : '') + '</div></div>';
+    if (id) {
+      return '<div class="cam"><div class="cam-frame"><iframe src="https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&amp;mute=1&amp;playsinline=1" title="Live airfield camera" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>' +
+        '<div class="cam-fallback"><p>If the player stays dark, this page can’t embed outside video (shared links block it).</p><a class="btn primary small-btn" href="https://www.youtube.com/watch?v=' + id + '" target="_blank" rel="noopener">Open the stream on YouTube ' + icon('ext') + '</a></div></div>' +
+        '<p class="muted small cam-note">Third-party stream. Not operated by Fraport or this tool; it can end at any time.</p>' + find + dock + '</div>';
+    }
+    return '<div class="cam"><div class="cam-hero"><span class="live-badge"><i></i>LIVE</span><div class="cam-hero-t">See the airfield as it happens</div>' +
+      '<p>Fraport has no official 24/7 public stream, but plane spotters broadcast live from the Frankfurt fence most days. Open the current streams, or dock one here so it sits next to your plan.</p>' + find + '</div>' + dock +
+      '<p class="muted small cam-note">Streams are third-party and change daily. Shared links of this tool open them on YouTube; a local copy can play them inline.</p></div>';
+  }
+
+  /* ================= product tour ================= */
+  var T = { on: false, paused: false, idx: 0, tok: 0, saved: null, marks: [], target: null, raf: null };
+  var SCENES = [
+    { card: true, chapter: 'Intro', eyebrow: 'Crew Bus Copilot', title: 'Crew dispatch, planned in seconds', sub: 'An AI-first copilot for crew transport at Frankfurt Airport. About 1,100 crew bus trips a day, planned automatically instead of one phone call at a time.', dur: 7000 },
+    { chapter: 'The problem', eyebrow: 'The problem', title: 'One phone call per trip', sub: 'Today, crews reach their aircraft late and buses drive empty. One late crew can delay a whole flight.', tab: 'overview', target: '#view-overview .compare', dur: 6500 },
+    { chapter: 'Tasks', eyebrow: 'Step 1 · Tasks', title: 'Every crew in one list', sub: 'Who needs a bus, from where to where, and by when.', tab: 'input', target: '#view-input .tbl', dur: 5500 },
+    { chapter: 'Disruptions', eyebrow: 'Step 2 · Disruptions', title: 'Just say what happened', sub: 'Type it the way you’d say it on the radio. The copilot re-plans every bus instantly.', tab: 'input', target: '#view-input .disrupt', dur: 4200,
+      run: async function (tok) { var ta = $('#disruptText'); ta.value = ''; ta.focus(); await tWait(700, tok); await typeText(ta, 'LH400 delayed 30 min', tok); await tWait(600, tok); doApply(); setTarget('#view-input .disrupt'); } },
+    { chapter: 'Plan', eyebrow: 'Step 3 · Plan', title: 'Every proposal explains itself', sub: 'Which bus, why the copilot chose it, and what the next-best option would cost.', tab: 'plan', target: '#view-plan .bus .assign', dur: 6500 },
+    { chapter: 'Accept', eyebrow: 'Step 3 · Plan', title: 'Accept in one tap', sub: 'Or overrule it. The rest of the plan adapts around the dispatcher’s choice.', tab: 'plan', target: '#view-plan .bus .assign', dur: 4500,
+      run: async function (tok) { await tWait(1600, tok); var b = $('#view-plan [data-action=accept]'); if (b) b.click(); setTarget('#view-plan .bus .assign'); } },
+    { chapter: 'Live map', eyebrow: 'Step 4 · Live map', title: 'Watch the morning unfold', sub: 'Every bus moving across the apron, in sync with the plan.', tab: 'live', target: '.map-card', dur: 7500,
+      pre: function () { L.view = 'map'; L.mode = 'sim'; L.source = 'copilot'; L.t = 6 * 60 + 4; L.speed = 60; sel = null; },
+      run: async function (tok) { await tWait(500, tok); L.playing = true; ensureLoop(); } },
+    { chapter: 'Details', eyebrow: 'Step 4 · Live map', title: 'Tap anything for details', sub: 'Bus, crew, flight or place, linked across map, timeline and table.', tab: 'live', target: '#lvInspector', dur: 6000,
+      run: async function () { select('bus', 'B02'); setTarget('#lvInspector'); } },
+    { chapter: 'Alerts', eyebrow: 'Step 5 · Alerts', title: 'Problems surface before crews are late', sub: 'A bus breaks down: the copilot moves its crews and tells you who is at risk.', tab: 'live', target: '.search-btn', dur: 6500,
+      run: async function (tok) { A.popups = true; openPalette(); await tWait(500, tok); var k = $('#kInput'); await typeText(k, 'B05 out of service from 06:16', tok); await tWait(700, tok); runPalette(0); await tWait(600, tok); setTarget('#alertStack'); } },
+    { chapter: 'Results', eyebrow: 'Step 6 · Results', title: 'Prove it in a shadow pilot', sub: 'The same day, two ways: crews on time, empty kilometres, buses used.', tab: 'overview', target: '#view-overview .hero-result', dur: 6500,
+      pre: function () { L.playing = false; } },
+    { card: true, end: true, chapter: 'Summary', eyebrow: 'Crew Bus Copilot', title: 'Fewer late crews. Fewer empty kilometres.', sub: 'The dispatcher stays in control. Ready for a 90-day shadow pilot at Frankfurt.', dur: 7000 }
+  ];
+  function tWait(ms, tok) {
+    return new Promise(function (res, rej) {
+      var left = ms, last = performance.now();
+      (function tick() {
+        if (tok !== T.tok) { rej('skip'); return; }
+        var now = performance.now(); if (!T.paused) left -= now - last; last = now;
+        if (left <= 0) res(); else setTimeout(tick, 30);
+      })();
+    });
+  }
+  async function typeText(el, text, tok) {
+    el.value = '';
+    for (var i = 0; i < text.length; i++) { el.value += text[i]; el.dispatchEvent(new Event('input', { bubbles: true })); await tWait(55, tok); }
+  }
+  function setTarget(sel2) { T.target = sel2; var el = sel2 && $(sel2); if (el) el.scrollIntoView({ block: 'center', behavior: RM ? 'auto' : 'smooth' }); }
+  function followSpot() {
+    if (!T.on) return;
+    var spot = $('#tourSpot'), sc = SCENES[T.idx], el = !sc.card && T.target && $(T.target);
+    if (el) {
+      var r = el.getBoundingClientRect(), pad = 8;
+      spot.style.opacity = 1;
+      spot.style.transform = 'translate(' + (r.left - pad) + 'px,' + (r.top - pad) + 'px)';
+      spot.style.width = (r.width + pad * 2) + 'px'; spot.style.height = (Math.min(r.height, window.innerHeight - 40) + pad * 2) + 'px';
+    } else spot.style.opacity = 0;
+    T.raf = requestAnimationFrame(followSpot);
+  }
+  function renderTourBar() {
+    var sc = SCENES[T.idx], o = $('#tour');
+    o.classList.toggle('is-card', !!sc.card); o.classList.toggle('paused', T.paused);
+    $('#tourCard').innerHTML = sc.card ? '<div class="tc-in"><div class="tc-icon">' + icon('bus') + '</div><div class="eyebrow">' + esc(sc.eyebrow) + '</div><h2>' + esc(sc.title) + '</h2><p>' + esc(sc.sub) + '</p>' +
+      (sc.end ? '<div class="row gap wrap tc-actions"><button class="btn primary lg" data-action="tourTry">Try it yourself</button><button class="btn lg tc-ghost" data-action="tourStart">Watch again</button></div>' : '') + '</div>' : '';
+    $('#tourCaption').innerHTML = sc.card ? '' : '<div class="eyebrow">' + esc(sc.eyebrow) + '</div><div class="tour-title">' + esc(sc.title) + '</div><div class="tour-sub">' + esc(sc.sub) + '</div>';
+    $('#tourProg').innerHTML = SCENES.map(function (s, i) { return '<span class="tp' + (i < T.idx ? ' done' : i === T.idx ? ' cur' : '') + '"><i' + (i === T.idx ? ' style="animation-duration:' + ((s.est || s.dur + 2500) / 1000) + 's"' : '') + '></i></span>'; }).join('');
+    $('#tourPauseBtn').innerHTML = icon(T.paused ? 'play' : 'pause');
+    $('#tourPauseBtn').setAttribute('aria-label', T.paused ? 'Play' : 'Pause');
+  }
+  async function playScenes(start) {
+    var tok = ++T.tok;
+    try {
+      for (var i = start; i < SCENES.length; i++) {
+        var sc = SCENES[i]; T.idx = i; T.marks[i] = performance.now(); T.target = null;
+        if (sc.pre) sc.pre();
+        if (sc.tab) { if (sc.tab === 'live') renderLive(); showTab(sc.tab); }
+        closePaletteIf(sc);
+        renderTourBar();
+        await tWait(350, tok);
+        if (sc.target) setTarget(sc.target);
+        if (sc.run) await sc.run(tok);
+        await tWait(sc.dur, tok);
+      }
+      window.__tourDone = true;
+    } catch (e) { if (e !== 'skip') throw e; }
+  }
+  function closePaletteIf(sc) { if (sc.chapter !== 'Alerts' && !$('#palette').hidden) closePalette(); }
+  function tourNext() { if (T.idx < SCENES.length - 1) playScenes(T.idx + 1); }
+  function startTour() {
+    if (!T.on) T.saved = { s: JSON.stringify(S), tab: tab, popups: A.popups, view: L.view, t: L.t, speed: L.speed, source: L.source, mode: L.mode };
+    T.on = true; T.paused = false; window.__tourDone = false;
+    S = freshScenario(); sel = null; A.popups = false; A.list = []; A.unread = 0; A.fired = {}; renderBell(false);
+    $('#alertStack').innerHTML = ''; L.playing = false; L.view = 'map';
+    renderAll();
+    document.body.classList.add('touring'); $('#tour').hidden = false;
+    cancelAnimationFrame(T.raf); followSpot();
+    playScenes(0);
+  }
+  function endTour() {
+    if (!T.on) return;
+    T.on = false; T.tok++; cancelAnimationFrame(T.raf);
+    $('#tour').hidden = true; document.body.classList.remove('touring');
+    if (!$('#palette').hidden) closePalette();
+    var sv = T.saved; S = JSON.parse(sv.s); A.popups = sv.popups; L.view = sv.view; L.t = sv.t; L.speed = sv.speed; L.source = sv.source; L.mode = sv.mode; L.playing = false; sel = null;
+    $('#alertStack').innerHTML = '';
+    tab = sv.tab; renderAll();
+  }
+  window.CrewTour = { start: startTour, scenes: SCENES, marks: T.marks };
+
+  /* ================= video guide ================= */
+  function openVideo() {
+    var s = $('#videoSheet'); document.body.classList.add('modal-open');
+    var ch = (typeof TOUR_CHAPTERS !== 'undefined' ? TOUR_CHAPTERS : []);
+    s.querySelector('.sheet-body').innerHTML =
+      '<div class="sheet-grabber"></div><div class="eyebrow">Product tour</div><h2 class="sheet-title">Crew Bus Copilot in 80 seconds</h2>' +
+      '<div class="video-frame"><video id="tourVideo" src="tour.mp4" poster="tour-poster.jpg" controls playsinline preload="metadata"></video></div>' +
+      (ch.length ? '<div class="chapters" role="list">' + ch.map(function (c, i) { return '<button class="chapter" data-action="seek" data-t="' + c.t + '"><span class="mono">' + Math.floor(c.t / 60) + ':' + String(Math.floor(c.t % 60)).padStart(2, '0') + '</span><span>' + (i ? i + '. ' : '') + esc(c.title) + '</span></button>'; }).join('') + '</div>' : '') +
+      '<div class="row gap wrap sheet-actions"><button class="btn primary lg" data-action="tourStart">' + icon('spark') + ' Run it live in the app</button><button class="btn tinted lg" data-action="videoClose">Close</button></div>';
+    s.hidden = false;
+  }
+  function closeVideo() { var s = $('#videoSheet'); if (s.hidden) return; var v = $('#tourVideo'); if (v) v.pause(); s.hidden = true; document.body.classList.remove('modal-open'); }
 
   /* ================= boot ================= */
   var mac = /Mac|iPhone|iPad/.test(navigator.platform || '');

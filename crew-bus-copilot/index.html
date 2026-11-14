@@ -15,7 +15,7 @@
       </span>
       <div class="brand-text">
         <div class="title">Crew Bus Copilot</div>
-        <div class="subtitle">Frankfurt Airport · crew transport demo</div>
+        <div class="subtitle">AI dispatch copilot · Frankfurt Airport</div>
       </div>
     </div>
     <nav class="tabs" role="tablist" aria-label="Pages">
@@ -36,6 +36,9 @@
         </button>
         <div class="alert-panel" id="alertPanel" hidden></div>
       </div>
+      <button class="tour-btn" data-action="video" aria-label="Watch the product tour">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg><span>Tour</span>
+      </button>
       <button class="icon-btn" data-action="help" aria-label="What is this?">
         <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17" r=".6"/></svg>
       </button>
@@ -82,6 +85,33 @@
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
     <div class="sheet-body"></div>
+  </div>
+</div>
+
+<div id="videoSheet" class="overlay sheet-overlay" hidden>
+  <div class="sheet sheet-wide" role="dialog" aria-modal="true" aria-label="Product tour video">
+    <button class="icon-btn sheet-close" data-action="videoClose" aria-label="Close">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="sheet-body"></div>
+  </div>
+</div>
+
+<div id="tour" class="tour" hidden>
+  <div class="tour-block"></div>
+  <div class="tour-spot" id="tourSpot"></div>
+  <div class="tour-card" id="tourCard"></div>
+  <div class="tour-bar" role="dialog" aria-label="Product tour" aria-live="polite">
+    <div class="tour-prog" id="tourProg"></div>
+    <div class="tour-row">
+      <div class="tour-cap" id="tourCaption"></div>
+      <div class="tour-ctl">
+        <button class="icon-btn" data-action="tourPrev" aria-label="Previous step"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="icon-btn tour-pp" id="tourPauseBtn" data-action="tourPause" aria-label="Pause"></button>
+        <button class="icon-btn" data-action="tourNext" aria-label="Next step"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button class="btn small-btn plain tour-x" data-action="tourEnd">Exit tour</button>
+      </div>
+    </div>
   </div>
 </div>
 
