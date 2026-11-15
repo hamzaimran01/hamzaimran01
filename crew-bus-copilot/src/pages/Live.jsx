@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnchorButton, Button, Callout, Card, Classes, CompoundTag, HTMLTable, InputGroup, Intent, NonIdealState, Section, SectionCard, SegmentedControl, Slider, Tag } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
 import { FraMap } from '../map.js';
@@ -240,6 +240,27 @@ function DutyRoster({ p, t, selBus }) {
   );
 }
 
+/* ---------- open jobs → bus (dispatch animation) ---------- */
+export const DISPATCH_LEAD = 10; // a job is handed to its bus 10 min before the bus sets off on that run
+const dispatchAt = (a) => a.trip.r.start - DISPATCH_LEAD;
+function flyCard(html, r0, r1, done) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  const el = wrap.firstElementChild;
+  if (!el) { done(); return; }
+  el.removeAttribute('data-open-job');
+  el.classList.add('job-flyer');
+  Object.assign(el.style, { left: r0.left + 'px', top: r0.top + 'px', width: r0.width + 'px', height: r0.height + 'px' });
+  document.body.appendChild(el);
+  const dx = r1.left - r0.left, dy = r1.top - r0.top, sc = Math.max(0.35, Math.min(1, r1.height / r0.height));
+  const anim = el.animate([
+    { transform: 'translate(0,0) scale(1)', opacity: 1 },
+    { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 50}px) scale(1.05)`, opacity: 1, offset: 0.45 },
+    { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, opacity: 0.15 }
+  ], { duration: 900, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'forwards' });
+  anim.onfinish = () => { el.remove(); done(); };
+}
+
 /* ---------- page ---------- */
 export default function LivePage() {
   const { S, plan, live, setLive, liveT: t, livePlan: p, range, sel, select, setView } = useApp();
@@ -249,6 +270,25 @@ export default function LivePage() {
   const [r0, r1] = range;
 
   const rows = useMemo(() => S.tasks.slice().sort((a, b) => a.due - b.due || (a.id < b.id ? -1 : 1)), [S.tasks]);
+  const byReady = useMemo(() => S.tasks.slice().sort((a, b) => a.ready - b.ready || a.due - b.due || (a.id < b.id ? -1 : 1)), [S.tasks]);
+  const openJobs = byReady.filter((tk) => { const a = p.byTask[tk.id]; return !a || t < dispatchAt(a); });
+  const dispatchedIds = byReady.filter((tk) => { const a = p.byTask[tk.id]; return a && t >= dispatchAt(a); }).map((tk) => tk.id);
+  const prevJobs = useRef({ t: null, ids: new Set(), rects: {}, html: {}, src: null });
+  useLayoutEffect(() => {
+    const prev = prevJobs.current;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce && prev.t != null && prev.src === live.source && t > prev.t && t - prev.t <= 6) {
+      dispatchedIds.filter((id) => !prev.ids.has(id)).slice(0, 6).forEach((id) => {
+        const a = p.byTask[id], r0 = prev.rects[id], slot = document.getElementById('bslot-' + a.bus), chip = document.getElementById('bchip-' + id);
+        if (!r0 || !slot) return;
+        if (chip) chip.style.opacity = '0';
+        flyCard(prev.html[id], r0, (chip || slot).getBoundingClientRect(), () => { const c = document.getElementById('bchip-' + id); if (c) { c.style.opacity = ''; c.classList.remove('landed'); void c.offsetWidth; c.classList.add('landed'); } });
+      });
+    }
+    const rects = {}, html = {};
+    document.querySelectorAll('[data-open-job]').forEach((el) => { const id = el.getAttribute('data-open-job'); rects[id] = el.getBoundingClientRect(); html[id] = el.outerHTML; });
+    prevJobs.current = { t, ids: new Set(dispatchedIds), rects, html, src: live.source };
+  });
   const counts = { planned: 0, enroute: 0, boarding: 0, onboard: 0, done: 0, late: 0 };
   const taskRows = rows.map((tk) => {
     const a = p.byTask[tk.id];
@@ -277,7 +317,7 @@ export default function LivePage() {
               <Button icon="step-backward" aria-label="Back 5 minutes" onClick={() => set({ t: Math.max(r0, t - 5) })}>−5</Button>
               <Button intent={Intent.PRIMARY} size="large" icon={live.playing ? 'pause' : 'play'} className="play-btn" onClick={() => set({ playing: !live.playing, t: !live.playing && t >= r1 ? r0 : t })}>{live.playing ? 'Pause' : t >= r1 ? 'Replay' : 'Play'}</Button>
               <Button endIcon="step-forward" aria-label="Forward 5 minutes" onClick={() => set({ t: Math.min(r1, t + 5) })}>+5</Button>
-              <SegmentedControl size="small" value={String(live.speed)} onValueChange={(v) => set({ speed: +v })} options={[1, 10, 60].map((s) => ({ value: String(s), label: s + '×' }))} />
+              <SegmentedControl size="small" value={String(live.speed)} onValueChange={(v) => set({ speed: +v })} options={[1, 5, 10, 60].map((s) => ({ value: String(s), label: s + '×' }))} />
               <div className="slider-wrap"><Slider min={r0} max={r1} stepSize={0.25} labelStepSize={15} value={Math.min(Math.max(t, r0), r1)} onChange={(v) => set({ t: v })} labelRenderer={(v, o) => (o && o.isHandleTooltip ? fmt(v) : fmt(v))} /></div>
             </div>
           )}
@@ -327,7 +367,14 @@ export default function LivePage() {
           return (
             <div key={b.id} className={'lv-row lvk-' + st.kind + (selBus === b.id ? ' is-sel' : '')} onClick={() => select('bus', b.id)}>
               <div className="lv-info">
-                <div className="lv-id"><BusChip id={b.id} intent={st.kind === 'out' ? Intent.DANGER : undefined} /><span className="mono bp6-text-muted small">{b.driver}</span><BusStateTag kind={st.kind} label={st.label} /></div>
+                <div className="lv-id"><BusChip id={b.id} intent={st.kind === 'out' ? Intent.DANGER : undefined} /><span className="mono bp6-text-muted small">{b.driver}</span><BusStateTag kind={st.kind} label={st.label} />
+                <span className="lv-jobs">
+                  {byReady.filter((tk) => { const a = p.byTask[tk.id]; return a && a.bus === b.id && t >= dispatchAt(a); }).map((tk) => {
+                    const a = p.byTask[tk.id], s2 = taskNow(tk, a, t);
+                    return <Tag key={tk.id} id={'bchip-' + tk.id} minimal={s2.k === 'done'} intent={tk.dir === 'DEP' ? Intent.PRIMARY : Intent.SUCCESS} className={'bus-job' + (s2.k === 'done' ? ' is-done' : '')} htmlTitle={tk.id + ' ' + tk.flight + ' · ' + tk.from + ' → ' + tk.to + ' · ' + s2.label}>{tk.id}</Tag>;
+                  })}
+                  <span id={'bslot-' + b.id} className="bus-slot" aria-hidden="true" />
+                </span></div>
                 <div className="lv-what">{st.what}{st.until != null && <span className="bp6-text-muted small"> · until {fmt(st.until)} ({inMin(st.until, t)})</span>}</div>
                 {st.progress != null && <div className="lv-prog"><span style={{ width: Math.max(0, Math.min(1, st.progress)) * 100 + '%' }} /></div>}
                 <div className="lv-next small">{st.next ? <>Next <b className="mono">{ids(tids(st.next))}</b> {st.next.tasks[0].flight} · leaves {shortLoc(st.next.startLoc)} {fmt(st.next.r.start)} <span className="bp6-text-muted">({inMin(st.next.r.start, t)})</span></> : <span className="bp6-text-muted">No more runs planned</span>}</div>
@@ -336,6 +383,23 @@ export default function LivePage() {
             </div>
           );
         })}
+        </SectionCard>
+        <SectionCard className="open-jobs">
+          <div className="open-jobs-h"><b>Open jobs (offene Aufträge) · {openJobs.length}</b> <span className="bp6-text-muted small">Each job jumps to its bus {DISPATCH_LEAD} min before that bus sets off. Press play to watch.</span></div>
+          {openJobs.length ? (
+            <div className="jobs">
+              {openJobs.map((tk) => {
+                const a = p.byTask[tk.id];
+                return (
+                  <Card compact key={tk.id} className="job" data-open-job={tk.id} interactive onClick={() => select('task', tk.id)}>
+                    <div className="job-top"><b className="mono">{tk.id}</b><DirTag dir={tk.dir} /><span className="mono job-time">{fmt(tk.ready)}</span></div>
+                    <div className="bp6-text-muted job-route">{shortLoc(tk.from)} → {shortLoc(tk.to)} · {tk.pax}</div>
+                    <div className="bp6-text-muted job-route">{a ? 'to ' + a.bus + ' at ' + fmt(dispatchAt(a)) : 'no bus available'}</div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : <Callout intent={Intent.SUCCESS} icon="tick-circle" compact>All jobs are with a bus. Rewind the clock to see them jump again.</Callout>}
         </SectionCard>
       </Section>
 

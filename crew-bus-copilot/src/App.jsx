@@ -10,7 +10,6 @@ import {
 } from './logic.js';
 import TasksPage from './pages/Tasks.jsx';
 import PlanPage from './pages/Plan.jsx';
-import AllocatePage from './pages/Allocate.jsx';
 import LivePage from './pages/Live.jsx';
 import ResultsPage from './pages/Results.jsx';
 import Tour from './Tour.jsx';
@@ -29,7 +28,6 @@ export const useApp = () => useContext(AppCtx);
 
 const PAGES = [
   { id: 'input', label: 'Tasks', icon: 'th-list' },
-  { id: 'allocate', label: 'Allocation', icon: 'flows' },
   { id: 'plan', label: 'Plan', icon: 'timeline-events' },
   { id: 'live', label: 'Live map', icon: 'map' },
   { id: 'overview', label: 'Results', icon: 'chart' }
@@ -238,7 +236,6 @@ export default function App() {
 
         <main id={'view-' + tab} className="view enter" key={tab}>
           {tab === 'input' && <TasksPage />}
-          {tab === 'allocate' && <AllocatePage />}
           {tab === 'plan' && <PlanPage />}
           {tab === 'live' && <LivePage />}
           {tab === 'overview' && <ResultsPage />}
