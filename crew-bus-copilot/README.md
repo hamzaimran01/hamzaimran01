@@ -40,6 +40,11 @@ Source: `src/main.jsx` (entry), `src/App.jsx` (shell, alerts, command bar, dialo
 ## Airfield camera
 Live map → **Airfield camera**. Fraport runs no official 24/7 public stream, so this view links to the live Frankfurt plane-spotter streams on YouTube and to weather webcams near FRA. You can also dock a stream link of your choice. A docked stream plays inline when `index.html` is opened locally; shared artifact links can't embed outside video and open it on YouTube instead.
 
+## Design rules (keep these)
+- **Live map follows the dispatch-board pattern** (as in classic airport dispatch tools such as INFORM's): bus rows with driver ID, current activity and timeline at the **top**; the pool of **open jobs (offene Aufträge) at the bottom**.
+- **Jobs move from the pool into the bus rows.** While the replay runs, each job visibly jumps from the open-jobs pool into the row of the bus it is assigned to, and stays there as a tag. Rewinding puts it back in the pool.
+- Do not replace this board with a separate allocation page or a driver-centred view.
+
 ## Across the app
 - **⌘K / Ctrl+K or `/`** opens a command bar: search tasks, flights and buses, jump to pages, or type a disruption to apply it.
 - **Alerts**: pop-up banners and an alert center (bell) for crews that will be late, tight connections (≤ 1 min spare), buses going out of service, missing buses, and plan updates. Each alert has a "View" button that selects the item on the map. Pop-ups can be switched off.
