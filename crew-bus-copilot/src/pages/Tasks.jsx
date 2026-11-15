@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Button, Callout, Classes, Collapse, HTMLTable, Intent, Section, SectionCard, Tag, TextArea } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
-import { busOutLabel, fmt, HELP } from '../logic.js';
+import { busOutLabel, fmt, HELP, shortList } from '../logic.js';
 import { BusChip, DirTag, DriverAvatar, PageIntro, Tip } from '../ui.jsx';
 
 const EXAMPLES = ['LH400 delayed 30 min', 'B03 broke down', 'B05 out of service from 06:30', 'add task LH999 DEP 6 crew Crew Center to Pier A ready 06:30 due 06:45', 'cancel LH1500'];
@@ -10,6 +10,7 @@ export default function TasksPage() {
   const { S, plan, draft, setDraft, parseOut, setParseOut, applyDisruption, actions, setTab, select, flash } = useApp();
   const [help, setHelp] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const submit = () => {
     if (!draft.trim()) return;
@@ -42,7 +43,7 @@ export default function TasksPage() {
                 ))}
                 {parseOut.results.some((r) => r.ok) && (
                   <Callout intent={Intent.PRIMARY} icon="exchange" compact>
-                    {parseOut.changed.length ? parseOut.changed.length + ' task(s) moved to another bus: ' + parseOut.changed.join(', ') + '. ' : 'No bus changed, times updated. '}
+                    {parseOut.changed.length ? parseOut.changed.length + ' crew tasks moved to a better bus: ' + shortList(parseOut.changed) + '. ' : 'No bus changed, times updated. '}
                     <Button size="small" variant="minimal" intent={Intent.PRIMARY} onClick={() => setTab('plan')}>Open plan</Button>
                     <Button size="small" variant="minimal" intent={Intent.PRIMARY} icon="map" onClick={() => setTab('live')}>Live map</Button>
                   </Callout>
@@ -92,7 +93,7 @@ export default function TasksPage() {
                 <th>Dispatcher’s bus <Tip text="The bus today’s dispatcher assigned by phone." /></th><th>Copilot’s bus</th><th />
               </tr></thead>
               <tbody>
-                {S.tasks.slice().sort((a, b) => a.ready - b.ready || (a.id < b.id ? -1 : 1)).map((t) => {
+                {S.tasks.slice().sort((a, b) => a.ready - b.ready || (a.id < b.id ? -1 : 1)).slice(0, showAll ? undefined : 60).map((t) => {
                   const a = plan.byTask[t.id], late = a && a.res.late;
                   return (
                     <tr key={t.id + flash.n} className={(flash.changed.includes(t.id) ? 'flash ' : '') + (late ? 'is-late' : '')} onClick={() => select('task', t.id, 'live')}>
@@ -107,6 +108,7 @@ export default function TasksPage() {
               </tbody>
             </HTMLTable>
           </div>
+          {S.tasks.length > 60 && <div className="pad"><Button variant="minimal" icon={showAll ? 'chevron-up' : 'chevron-down'} onClick={() => setShowAll((x) => !x)}>{showAll ? 'Show the first 60' : 'Show all ' + S.tasks.length + ' tasks'}</Button></div>}
         </SectionCard>
       </Section>
     </>

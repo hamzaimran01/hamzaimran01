@@ -1,5 +1,5 @@
-import React from 'react';
-import { Callout, Card, Classes, HTMLTable, Icon, Intent, Section, SectionCard, Tag } from '@blueprintjs/core';
+import React, { useState } from 'react';
+import { Button, Callout, Card, Classes, HTMLTable, Icon, Intent, Section, SectionCard, Tag } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
 import { FRA_FACTS } from '../data.js';
 import { Engine, fmt, ids, RULES } from '../logic.js';
@@ -25,6 +25,7 @@ export default function ResultsPage() {
   const a = base.metrics, b = plan.metrics;
   const pure = Engine.planCopilot(S.tasks, S.buses, {}).metrics, nOv = Object.keys(S.overrides).length;
   const emptyCut = a.empty ? Math.round((a.empty - b.empty) / a.empty * 100) : 0;
+  const [showAll, setShowAll] = useState(false);
 
   return (
     <>
@@ -88,7 +89,7 @@ export default function ResultsPage() {
                 <tr><th>Bus</th><th>Time</th><th>Late</th><th>Bus</th><th>Time</th><th>Late</th></tr>
               </thead>
               <tbody>
-                {S.tasks.slice().sort((x, y) => x.ready - y.ready || (x.id < y.id ? -1 : 1)).map((t) => {
+                {S.tasks.slice().sort((x, y) => x.ready - y.ready || (x.id < y.id ? -1 : 1)).slice(0, showAll ? undefined : 40).map((t) => {
                   const cell = (as, isBase) => {
                     if (!as) return <td colSpan={3} className="bad">not served</td>;
                     const tm = t.dir === 'DEP' ? as.res.doneAt : as.res.pickupAt;
@@ -103,7 +104,7 @@ export default function ResultsPage() {
               </tbody>
             </HTMLTable>
           </div>
-          <p className="bp6-text-muted small pad">Time = at the aircraft (DEP) or picked up (ARR).</p>
+          <p className="bp6-text-muted small pad">Time = at the aircraft (DEP) or picked up (ARR). {S.tasks.length > 40 && <Button size="small" variant="minimal" onClick={() => setShowAll((x) => !x)}>{showAll ? 'Show the first 40' : 'Show all ' + S.tasks.length + ' tasks'}</Button>}</p>
         </SectionCard>
       </Section>
     </>

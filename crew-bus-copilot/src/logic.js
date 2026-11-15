@@ -1,24 +1,45 @@
 import { Engine } from './engine.js';
 import { Parser } from './parser.js';
-import { SAMPLE_TASKS, SAMPLE_BUSES, RULES } from './data.js';
+import { SAMPLE_TASKS, SAMPLE_BUSES, RULES, DATA_VERSION } from './data.js';
 
 export const fmt = Engine.fmt;
 export const ids = (a) => a.join('+');
+/** Short list for messages: first n items, then "and N more". */
+export const shortList = (a, n = 8) => (a.length <= n ? a.join(', ') : a.slice(0, n).join(', ') + ' and ' + (a.length - n) + ' more');
 export const tids = (tr) => tr.tasks.map((x) => x.id);
 export const shortLoc = (l) => l.replace('Crew Center', 'Crew Ctr');
 
+/* Today's call-by-call dispatcher, for generated tasks: in ready order, each call goes to one of the
+   three buses that can reach the pickup soonest (seeded), one run per call, no sharing. */
+function recordDispatcher(tasks, buses) {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const st = {}; buses.forEach((b) => { st[b.id] = { loc: b.start, avail: b.shiftStart, end: b.shiftEnd }; });
+  tasks.slice().sort((a, b) => a.ready - b.ready || a.due - b.due).forEach((t) => {
+    const own = t.dispatcherBus && st[t.dispatcherBus];
+    let id = t.dispatcherBus;
+    if (!own) {
+      const c = buses.map((b) => ({ id: b.id, at: Math.max(st[b.id].avail + Engine.drive(st[b.id].loc, t.from), t.ready) }))
+        .filter((x) => x.at < st[x.id].end).sort((x, y) => x.at - y.at).slice(0, 3);
+      if (!c.length) return;
+      id = c[Math.floor(rnd() * c.length)].id; t.dispatcherBus = id;
+    }
+    const s = st[id], arrive = Math.max(s.avail + Engine.drive(s.loc, t.from), t.ready);
+    s.avail = arrive + RULES.boarding + Engine.drive(t.from, t.to) + RULES.dropoff; s.loc = t.to;
+  });
+}
+
 export function freshScenario() {
-  return {
-    tasks: SAMPLE_TASKS.map((t) => {
-      const r = Engine.toMin(t.ready), d = Engine.toMin(t.due);
-      return { ...t, ready: r, due: d, origReady: r, origDue: d, flags: [] };
-    }),
-    buses: SAMPLE_BUSES.map((b) => {
-      const p = b.shift.split('-');
-      return { ...b, shiftStart: Engine.toMin(p[0]), shiftEnd: Engine.toMin(p[1]), outFrom: null };
-    }),
-    log: [], overrides: {}, overrideFrom: {}, accepted: {}, lastChange: null, nextId: 16, history: []
-  };
+  const buses = SAMPLE_BUSES.map((b) => {
+    const p = b.shift.split('-');
+    return { ...b, shiftStart: Engine.toMin(p[0]), shiftEnd: Engine.toMin(p[1]), outFrom: null };
+  });
+  const tasks = SAMPLE_TASKS.map((t) => {
+    const r = Engine.toMin(t.ready), d = Engine.toMin(t.due);
+    return { ...t, ready: r, due: d, origReady: r, origDue: d, flags: [] };
+  });
+  recordDispatcher(tasks, buses);
+  return { version: DATA_VERSION, tasks, buses, log: [], overrides: {}, overrideFrom: {}, accepted: {}, lastChange: null, nextId: tasks.length + 1, history: [] };
 }
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 export function computePlans(S) {
@@ -140,7 +161,9 @@ export function why(S, plan, id) {
 
 export function overruleOptions(S, plan, id) {
   const cur = plan.byTask[id].bus;
-  return S.buses.filter((b) => b.id !== cur && b.outFrom !== 0).map((b) => {
+  const t = taskOf(S, id);
+  return S.buses.filter((b) => b.id !== cur && b.outFrom !== 0)
+    .sort((x, y) => Engine.drive(x.start, t.from) - Engine.drive(y.start, t.from) || (x.id < y.id ? -1 : 1)).slice(0, 6).map((b) => {
     const p = Engine.planCopilot(S.tasks, S.buses, { ...S.overrides, [id]: b.id }), a = p.byTask[id];
     if (!a || a.bus !== b.id) return { bus: b.id, ok: false, label: b.id + ': cannot do it' };
     const d = p.metrics.lateMin - plan.metrics.lateMin, de = p.metrics.empty - plan.metrics.empty;

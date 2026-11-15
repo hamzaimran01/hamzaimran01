@@ -7,9 +7,12 @@ var FraMap = (function () {
     'Pier B':      { x: 470, y: 336, sub: 'Concourse B' },
     'Apron V':     { x: 214, y: 382, sub: 'remote stands' },
     'Apron F':     { x: 738, y: 368, sub: 'remote stands' },
-    'Bus Depot':   { x: 846, y: 276, sub: 'bus base' }
+    'Bus Depot':   { x: 846, y: 276, sub: 'bus base' },
+    'Pier C':      { x: 592, y: 262, sub: 'Concourse C' },
+    'Pier D':      { x: 681, y: 318, sub: 'Terminal 2' },
+    'Pier E':      { x: 729, y: 318, sub: 'Terminal 2' }
   };
-  var LABEL_OFF = { 'Crew Center': [-16, -14], 'Pier A': [8, -30], 'Pier Z': [-8, -30], 'Pier B': [-16, 26], 'Apron V': [14, 18], 'Apron F': [14, 18], 'Bus Depot': [0, -44] };
+  var LABEL_OFF = { 'Crew Center': [-16, -14], 'Pier A': [8, -30], 'Pier Z': [-8, -30], 'Pier B': [-16, 26], 'Apron V': [14, 18], 'Apron F': [14, 18], 'Bus Depot': [0, -44], 'Pier C': [0, -24], 'Pier D': [-14, 22], 'Pier E': [14, 22] };
 
   function node(name) { var n = NODES[name]; return n ? { x: n.x, y: n.y } : { x: 500, y: 300 }; }
   function ctrl(a, b) {
@@ -72,8 +75,7 @@ var FraMap = (function () {
         '</g>' +
         '<g class="m-area-t m-lbl">' +
           '<text x="500" y="218">Terminal 1</text><text x="650" y="215">Terminal 2</text>' +
-          '<text x="240" y="282">Concourse A / Z</text><text x="494" y="310">B</text><text x="580" y="270">C</text>' +
-          '<text x="680" y="318">D</text><text x="728" y="318">E</text>' +
+          '<text x="240" y="282">Concourse A / Z</text><text x="494" y="310">B</text>' +
           '<text x="520" y="580">Cargo City South</text>' +
         '</g>' +
       '</g>' +

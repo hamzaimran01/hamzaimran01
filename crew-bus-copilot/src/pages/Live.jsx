@@ -17,6 +17,7 @@ const StaticMap = memo(function StaticMap() {
 
 function MapOverlay({ p, t, selBus, onSelect }) {
   const { S } = useApp();
+  const dense = p.buses.length > 20, R = dense ? 8 : 12, gap = dense ? 17 : 20;
   const stationary = {}, items = [];
   p.buses.forEach((b) => {
     const st = busNow(S, b, t);
@@ -47,17 +48,23 @@ function MapOverlay({ p, t, selBus, onSelect }) {
         {items.map(({ b, st, pos, moving }) => {
           let { x, y } = pos;
           if (!moving) {
-            const grp = stationary[Math.round(x) + ',' + Math.round(y)], i = grp.indexOf(b.id);
-            if (grp.length > 1) { const ang = -Math.PI / 2 + i * (2 * Math.PI / grp.length); x += Math.cos(ang) * 20; y += Math.sin(ang) * 20; }
+            const grp = stationary[Math.round(x) + ',' + Math.round(y)];
+            let i = grp.indexOf(b.id);
+            if (grp.length > 1) {
+              // parked buses fill rings around their stand: 6 in the first ring, 12 in the second, ...
+              let ring = 1, cap = Math.min(6, grp.length);
+              while (i >= cap) { i -= cap; ring++; cap = 6 * ring; }
+              const ang = -Math.PI / 2 + i * (2 * Math.PI / cap); x += Math.cos(ang) * gap * ring; y += Math.sin(ang) * gap * ring;
+            }
           }
           const label = b.id + (st.trip ? ' · ' + ids(tids(st.trip)) : st.kind === 'out' ? ' · out' : '');
           const cls = 'm-bus m-k-' + st.kind + (st.cur && st.cur.type === 'drive' && st.trip && st.trip.tasks[0].dir === 'ARR' ? ' m-arr' : '') + (selBus === b.id ? ' m-sel' : '') + (st.trip && st.trip.r.late ? ' m-late' : '');
           return (
             <g key={b.id} id={'mb-' + b.id} className={cls} transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`} role="button" tabIndex={0} aria-label={'Bus ' + b.id + ', ' + st.label}
               onPointerDown={(e) => { e.preventDefault(); onSelect('bus', b.id); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect('bus', b.id); } }}>
-              <circle className="m-bus-pulse" r={12} /><circle className="m-bus-sel" r={17} /><circle className="m-bus-dot" r={12} />
-              <text className="m-bus-num" y={4}>{b.id.slice(1)}</text>
-              <g className="m-bus-tag m-lbl"><rect x={16} y={-10} rx={6} height={20} width={label.length * 6.6 + 14} /><text x={23} y={4}>{label}</text></g>
+              <circle className="m-bus-pulse" r={R} /><circle className="m-bus-sel" r={R + 5} /><circle className="m-bus-dot" r={R} />
+              <text className="m-bus-num" y={dense ? 2.5 : 4} style={dense ? { fontSize: 7 } : undefined}>{b.id.slice(1)}</text>
+              {(!dense || selBus === b.id) && <g className="m-bus-tag m-lbl"><rect x={R + 4} y={-10} rx={6} height={20} width={label.length * 6.6 + 14} /><text x={R + 11} y={4}>{label}</text></g>}
             </g>
           );
         })}
@@ -219,7 +226,10 @@ function DutyRoster({ p, t, selBus }) {
               <div key={g} className="roster-group">
                 <div className={Classes.TEXT_MUTED + ' roster-label'}>{label} · {list.length}</div>
                 <div className="roster-list">
-                  {list.map(({ b, src, st }) => (
+                  {list.map(({ b, src, st }) => (rows.length > 20 ? (
+                    <DriverAvatar key={b.id} driver={b.driver} size={28} status={g === 'out' ? 'out' : st.kind} selected={selBus === b.id} dim={g !== 'on'}
+                      onClick={() => select('bus', b.id)} title={b.driver + ' · bus ' + b.id + ' · shift ' + src.shift + ' · ' + st.label + (st.what ? ': ' + st.what : '')} />
+                  ) : (
                     <div key={b.id} className={'roster-item' + (selBus === b.id ? ' is-sel' : '')}>
                       <DriverAvatar driver={b.driver} status={g === 'out' ? 'out' : st.kind} selected={selBus === b.id} dim={g !== 'on'}
                         onClick={() => select('bus', b.id)}
@@ -229,7 +239,7 @@ function DutyRoster({ p, t, selBus }) {
                         <BusStateTag kind={g === 'out' ? 'out' : st.kind} label={g === 'out' ? 'Out of service' : st.label} />
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               </div>
             );
@@ -271,13 +281,33 @@ export default function LivePage() {
 
   const rows = useMemo(() => S.tasks.slice().sort((a, b) => a.due - b.due || (a.id < b.id ? -1 : 1)), [S.tasks]);
   const byReady = useMemo(() => S.tasks.slice().sort((a, b) => a.ready - b.ready || a.due - b.due || (a.id < b.id ? -1 : 1)), [S.tasks]);
-  const openJobs = byReady.filter((tk) => { const a = p.byTask[tk.id]; return !a || t < dispatchAt(a); });
-  const dispatchedIds = byReady.filter((tk) => { const a = p.byTask[tk.id]; return a && t >= dispatchAt(a); }).map((tk) => tk.id);
+  const tq = Math.floor(t * 4) / 4; // lists update every 15 simulated seconds; the map moves every frame
+  const [boardFilter, setBoardFilter] = useState('active');
+  const [allTasks, setAllTasks] = useState(false);
+  const heavy = useMemo(() => {
+    const openJobs = [], dispatchedIds = [], chipsByBus = {};
+    byReady.forEach((tk) => {
+      const a = p.byTask[tk.id];
+      if (!a || tq < dispatchAt(a)) openJobs.push(tk);
+      else { dispatchedIds.push(tk.id); (chipsByBus[a.bus] = chipsByBus[a.bus] || []).push(tk); }
+    });
+    openJobs.sort((x, y) => { const ax = p.byTask[x.id], ay = p.byTask[y.id]; return (ax ? dispatchAt(ax) : -1) - (ay ? dispatchAt(ay) : -1) || x.ready - y.ready; });
+    const counts = { planned: 0, enroute: 0, boarding: 0, onboard: 0, done: 0, late: 0 };
+    const taskRows = rows.map((tk) => {
+      const a = p.byTask[tk.id];
+      if (!a) return { tk, a: null };
+      const st = taskNow(tk, a, tq); counts[st.k]++; if (st.liveLate) counts.late++;
+      return { tk, a, s: st };
+    });
+    const busStates = {}; p.buses.forEach((b) => { busStates[b.id] = busNow(S, b, tq); });
+    return { openJobs, dispatchedIds, chipsByBus, counts, taskRows, busStates };
+  }, [tq, p, S, byReady, rows]);
+  const { openJobs, dispatchedIds, counts, taskRows } = heavy;
   const prevJobs = useRef({ t: null, ids: new Set(), rects: {}, html: {}, src: null });
   useLayoutEffect(() => {
     const prev = prevJobs.current;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduce && prev.t != null && prev.src === live.source && t > prev.t && t - prev.t <= 6) {
+    if (!reduce && prev.t != null && prev.src === live.source && tq > prev.t && tq - prev.t <= 6) {
       dispatchedIds.filter((id) => !prev.ids.has(id)).slice(0, 6).forEach((id) => {
         const a = p.byTask[id], r0 = prev.rects[id], slot = document.getElementById('bslot-' + a.bus), chip = document.getElementById('bchip-' + id);
         if (!r0 || !slot) return;
@@ -287,15 +317,13 @@ export default function LivePage() {
     }
     const rects = {}, html = {};
     document.querySelectorAll('[data-open-job]').forEach((el) => { const id = el.getAttribute('data-open-job'); rects[id] = el.getBoundingClientRect(); html[id] = el.outerHTML; });
-    prevJobs.current = { t, ids: new Set(dispatchedIds), rects, html, src: live.source };
+    prevJobs.current = { t: tq, ids: new Set(dispatchedIds), rects, html, src: live.source };
   });
-  const counts = { planned: 0, enroute: 0, boarding: 0, onboard: 0, done: 0, late: 0 };
-  const taskRows = rows.map((tk) => {
-    const a = p.byTask[tk.id];
-    if (!a) return { tk, a: null };
-    const s = taskNow(tk, a, t); counts[s.k]++; if (s.liveLate) counts.late++;
-    return { tk, a, s };
+  const visibleBuses = boardFilter === 'all' ? p.buses : p.buses.filter((b) => {
+    const st = heavy.busStates[b.id];
+    return b.id === selBus || (st.kind !== 'idle' && st.kind !== 'off' && st.kind !== 'out') || (st.next && st.next.r.start - tq <= 15);
   });
+  const visibleTasks = allTasks ? taskRows : taskRows.filter(({ a, s: st }) => !a || st.liveLate || st.k === 'enroute' || st.k === 'boarding' || st.k === 'onboard' || (st.k === 'planned' && a.trip.r.start - tq <= 20)).slice(0, 40);
 
   const ticks = [];
   for (let x = Math.ceil(r0 / 10) * 10; x <= r1; x += 10) ticks.push(<span key={x} className="tick" style={{ left: ((x - r0) / (r1 - r0) * 100) + '%' }}>{fmt(x)}</span>);
@@ -331,7 +359,7 @@ export default function LivePage() {
         ))}
       </div>
 
-      <DutyRoster p={p} t={t} selBus={selBus} />
+      <DutyRoster p={p} t={tq} selBus={selBus} />
 
       <div className="lv-grid">
         <Section elevation={1} className="map-card" icon={live.view === 'cam' ? 'video' : 'map'}
@@ -359,27 +387,28 @@ export default function LivePage() {
         <div className="inspector" id="lvInspector"><Section elevation={1} title="Details" icon="properties"><SectionCard><Inspector p={p} t={t} /></SectionCard></Section></div>
       </div>
 
-      <Section elevation={1} className="lv-board sec" title="Drivers and buses" icon="drive-time" subtitle="What each bus is doing now and what comes next">
+      <Section elevation={1} className="lv-board sec" title={'Drivers and buses · ' + visibleBuses.length + ' of ' + p.buses.length} icon="drive-time" subtitle="What each bus is doing now and what comes next"
+        rightElement={<SegmentedControl size="small" value={boardFilter} onValueChange={setBoardFilter} options={[{ value: 'active', label: 'Active now' }, { value: 'all', label: 'All buses' }]} />}>
         <SectionCard>
         <div className="lv-row lv-axisrow"><div className="lv-info small bp6-text-muted">Bus · driver</div><div className="lv-track"><div className="tl-axis">{ticks}<span className="lv-nowlabel mono" style={{ left: nowPct }}>{fmt(t)}</span></div></div></div>
-        {p.buses.map((b) => {
-          const st = busNow(S, b, t), src = busOf(S, b.id);
+        {visibleBuses.map((b) => {
+          const st = heavy.busStates[b.id], src = busOf(S, b.id);
           return (
             <div key={b.id} className={'lv-row lvk-' + st.kind + (selBus === b.id ? ' is-sel' : '')} onClick={() => select('bus', b.id)}>
               <div className="lv-info">
                 <div className="lv-id"><BusChip id={b.id} intent={st.kind === 'out' ? Intent.DANGER : undefined} /><span className="mono bp6-text-muted small">{b.driver}</span><BusStateTag kind={st.kind} label={st.label} />
                 <span className="lv-jobs">
-                  {byReady.filter((tk) => { const a = p.byTask[tk.id]; return a && a.bus === b.id && t >= dispatchAt(a); }).map((tk) => {
-                    const a = p.byTask[tk.id], s2 = taskNow(tk, a, t);
+                  {(heavy.chipsByBus[b.id] || []).map((tk) => {
+                    const a = p.byTask[tk.id], s2 = taskNow(tk, a, tq);
                     return <Tag key={tk.id} id={'bchip-' + tk.id} minimal={s2.k === 'done'} intent={tk.dir === 'DEP' ? Intent.PRIMARY : Intent.SUCCESS} className={'bus-job' + (s2.k === 'done' ? ' is-done' : '')} htmlTitle={tk.id + ' ' + tk.flight + ' · ' + tk.from + ' → ' + tk.to + ' · ' + s2.label}>{tk.id}</Tag>;
                   })}
                   <span id={'bslot-' + b.id} className="bus-slot" aria-hidden="true" />
                 </span></div>
-                <div className="lv-what">{st.what}{st.until != null && <span className="bp6-text-muted small"> · until {fmt(st.until)} ({inMin(st.until, t)})</span>}</div>
+                <div className="lv-what">{st.what}{st.until != null && <span className="bp6-text-muted small"> · until {fmt(st.until)} ({inMin(st.until, tq)})</span>}</div>
                 {st.progress != null && <div className="lv-prog"><span style={{ width: Math.max(0, Math.min(1, st.progress)) * 100 + '%' }} /></div>}
-                <div className="lv-next small">{st.next ? <>Next <b className="mono">{ids(tids(st.next))}</b> {st.next.tasks[0].flight} · leaves {shortLoc(st.next.startLoc)} {fmt(st.next.r.start)} <span className="bp6-text-muted">({inMin(st.next.r.start, t)})</span></> : <span className="bp6-text-muted">No more runs planned</span>}</div>
+                <div className="lv-next small">{st.next ? <>Next <b className="mono">{ids(tids(st.next))}</b> {st.next.tasks[0].flight} · leaves {shortLoc(st.next.startLoc)} {fmt(st.next.r.start)} <span className="bp6-text-muted">({inMin(st.next.r.start, tq)})</span></> : <span className="bp6-text-muted">No more runs planned</span>}</div>
               </div>
-              <div className="lv-track"><Timeline trips={b.trips} t0={r0} t1={r1} outFrom={src.outFrom} now={t} curTrip={st.trip} past /></div>
+              <div className="lv-track"><Timeline trips={b.trips} t0={r0} t1={r1} outFrom={src.outFrom} now={tq} curTrip={st.trip} past /></div>
             </div>
           );
         })}
@@ -388,7 +417,7 @@ export default function LivePage() {
           <div className="open-jobs-h"><b>Open jobs (offene Aufträge) · {openJobs.length}</b> <span className="bp6-text-muted small">Each job jumps to its bus {DISPATCH_LEAD} min before that bus sets off. Press play to watch.</span></div>
           {openJobs.length ? (
             <div className="jobs">
-              {openJobs.map((tk) => {
+              {openJobs.slice(0, 24).map((tk) => {
                 const a = p.byTask[tk.id];
                 return (
                   <Card compact key={tk.id} className="job" data-open-job={tk.id} interactive onClick={() => select('task', tk.id)}>
@@ -398,18 +427,20 @@ export default function LivePage() {
                   </Card>
                 );
               })}
+              {openJobs.length > 24 && <Card compact className="job job-more"><b>+{openJobs.length - 24} more</b><span className="bp6-text-muted">later jobs wait their turn</span></Card>}
             </div>
           ) : <Callout intent={Intent.SUCCESS} icon="tick-circle" compact>All jobs are with a bus. Rewind the clock to see them jump again.</Callout>}
         </SectionCard>
       </Section>
 
-      <Section elevation={1} className="sec" title="Crew tasks right now" icon="people" subtitle="Sorted by due time · ETA = at aircraft (DEP) or picked up (ARR)">
+      <Section elevation={1} className="sec" title={'Crew tasks right now · ' + visibleTasks.length + (allTasks ? '' : ' of ' + taskRows.length)} icon="people" subtitle={allTasks ? 'All tasks, sorted by due time' : 'On the way, boarding, on board, late, or starting within 20 min'}
+        rightElement={<SegmentedControl size="small" value={allTasks ? 'all' : 'now'} onValueChange={(v) => setAllTasks(v === 'all')} options={[{ value: 'now', label: 'Right now' }, { value: 'all', label: 'All tasks' }]} />}>
         <SectionCard padded={false}>
         <div className="table-wrap">
           <HTMLTable className="full-table lv-tbl" interactive compact>
             <thead><tr><th>Status</th><th>Task</th><th>Flight</th><th>Bus · driver</th><th>Route · people</th><th>Boards</th><th>ETA / due</th><th>Margin</th></tr></thead>
             <tbody>
-              {taskRows.map(({ tk, a, s }) => {
+              {visibleTasks.map(({ tk, a, s }) => {
                 if (!a) return <tr key={tk.id} className="lv-late"><td><TaskStateTag k="late" label="No bus" /></td><td className="mono">{tk.id}</td><td className="mono">{tk.flight}</td><td colSpan={5} className="bad">No bus can do this</td></tr>;
                 const dec = live.source === 'copilot' ? statusOf(S, plan, tk.id) : null;
                 const isSel = (sel && sel.kind === 'task' && sel.id === tk.id) || selFlight === tk.flight || (sel && sel.kind === 'bus' && a.bus === selBus);
@@ -420,7 +451,7 @@ export default function LivePage() {
                     <td className="mono"><b>{a.bus}</b> <span className="bp6-text-muted">{busOf(S, a.bus).driver}</span> {dec === 'accepted' ? <Tag minimal intent={Intent.SUCCESS} icon="tick" /> : dec === 'overruled' ? <Tag minimal intent={Intent.WARNING}>override</Tag> : dec === 'open' ? <Tag minimal>proposal</Tag> : null}</td>
                     <td>{shortLoc(tk.from)} → {shortLoc(tk.to)} <span className="bp6-text-muted small">{tk.pax}</span></td>
                     <td className="mono">{fmt(a.res.boardStart)}</td><td className="mono">{fmt(s.key)} <span className="bp6-text-muted">/ {fmt(tk.due)}</span></td>
-                    <td className="mono small">{s.liveLate ? <span className="bad">{Math.max(s.late, Math.ceil(t - tk.due))} min late</span> : s.k === 'done' ? <span className="good">{s.slack} min early</span> : <span className={s.tight ? 'warn' : 'bp6-text-muted'}>{s.slack} min spare</span>}</td>
+                    <td className="mono small">{s.liveLate ? <span className="bad">{Math.max(s.late, Math.ceil(tq - tk.due))} min late</span> : s.k === 'done' ? <span className="good">{s.slack} min early</span> : <span className={s.tight ? 'warn' : 'bp6-text-muted'}>{s.slack} min spare</span>}</td>
                   </tr>
                 );
               })}

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Callout, Card, CardList, Classes, Collapse, HTMLSelect, Intent, Section, SectionCard, Tag } from '@blueprintjs/core';
+import { Button, ButtonGroup, Callout, Card, CardList, Classes, Collapse, HTMLSelect, Intent, Section, SectionCard, Switch, Tag } from '@blueprintjs/core';
 import { useApp } from '../App.jsx';
-import { busOf, busOutLabel, fmt, ids, overruleOptions, RULES, shortLoc, statusOf, tids, why } from '../logic.js';
+import { busOf, busOutLabel, fmt, ids, overruleOptions, RULES, shortLoc, statusOf, tids, why, shortList } from '../logic.js';
 import { BusChip, DirTag, Kpi, PageIntro } from '../ui.jsx';
 
 export function Timeline({ trips, t0, t1, outFrom, now, curTrip, past }) {
@@ -44,6 +44,12 @@ function Overrule({ id }) {
 export default function PlanPage() {
   const { S, plan, actions, openOverrule, setOpenOverrule, flash, select } = useApp();
   const [howto, setHowto] = useState(false);
+  const [pg, setPg] = useState(0);
+  const [onlyUsed, setOnlyUsed] = useState(true);
+  const PER = 10;
+  const busList = plan.buses.filter((b) => !onlyUsed || b.trips.length || busOf(S, b.id).outFrom != null);
+  const pages = Math.max(1, Math.ceil(busList.length / PER)), page = Math.min(pg, pages - 1);
+  const shown = busList.slice(page * PER, page * PER + PER);
   const m = plan.metrics, all = [];
   plan.buses.forEach((b) => b.trips.forEach((tr) => tr.r.segs.forEach((s) => all.push(s.start, s.end))));
   const t0 = Math.floor(((all.length ? Math.min(...all) : 360) - 5) / 10) * 10;
@@ -74,15 +80,24 @@ export default function PlanPage() {
           <span><b>{counts.accepted}</b> accepted · <b>{counts.overruled}</b> overruled · <b>{counts.open}</b> to review</span>
           <Button intent={Intent.PRIMARY} icon="tick" disabled={!counts.open} onClick={actions.acceptAll}>Accept all on-time proposals</Button>
         </div>
-        {S.lastChange && <Callout intent={Intent.PRIMARY} icon="exchange" compact className="changed-note">Last change: <span className="mono">{S.lastChange.text}</span>{changed.length ? '. Moved: ' + changed.join(', ') : ''}</Callout>}
+        {S.lastChange && <Callout intent={Intent.PRIMARY} icon="exchange" compact className="changed-note">Last change: <span className="mono">{S.lastChange.text}</span>{changed.length ? '. Moved: ' + shortList(changed) : ''}</Callout>}
         <Button variant="minimal" size="small" icon="manual" className="howto-btn" onClick={() => setHowto((h) => !h)} endIcon={howto ? 'chevron-up' : 'chevron-down'}>How to read this page</Button>
         <Collapse isOpen={howto}>
           <div className="legend"><span><i className="lg lg-empty" />Driving empty</span><span><i className="lg lg-wait" />Waiting for crew</span><span><i className="lg lg-dep" />Crew to aircraft (DEP)</span><span><i className="lg lg-arr" />Crew back from aircraft (ARR)</span><span><i className="lg lg-late" />Late</span><span><i className="lg lg-out" />Out of service</span></div>
           <p className={Classes.TEXT_MUTED}>Rule: crews ready within {RULES.shareWindow} min, going to stops at most {RULES.nearbyMax} min apart, may share a bus (max {RULES.capacity} seats, {RULES.maxStops} stops, nobody late). Each run goes to the bus with the lowest score: {RULES.latePenalty} × late minutes + empty minutes. Being late counts 40 times more than driving empty.</p>
         </Collapse>
       </SectionCard></Section>
+      <div className="plan-pager">
+        <span>Buses <b>{busList.length ? page * PER + 1 : 0}–{Math.min(busList.length, page * PER + PER)}</b> of {busList.length}{onlyUsed ? ' with runs' : ''}</span>
+        <ButtonGroup>
+          <Button icon="chevron-left" disabled={page === 0} onClick={() => setPg(page - 1)} aria-label="Previous buses" />
+          <Button disabled>{page + 1} / {pages}</Button>
+          <Button icon="chevron-right" disabled={page >= pages - 1} onClick={() => setPg(page + 1)} aria-label="Next buses" />
+        </ButtonGroup>
+        <Switch checked={onlyUsed} label={'Hide reserve buses (' + (plan.buses.length - plan.buses.filter((b) => b.trips.length).length) + ' parked)'} onChange={(e) => { setOnlyUsed(e.target.checked); setPg(0); }} inline />
+      </div>
       <div className="tl-axis-wrap"><div className="tl-axis">{ticks}</div></div>
-      {plan.buses.map((b) => {
+      {shown.map((b) => {
         const src = busOf(S, b.id), out = busOutLabel(src);
         const empty = b.trips.reduce((s, tr) => s + tr.r.empty, 0);
         return (

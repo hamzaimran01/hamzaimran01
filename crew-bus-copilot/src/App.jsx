@@ -4,10 +4,9 @@ import {
   NavbarHeading, NonIdealState, OverlayToaster, Popover, Switch, Tab, Tabs, Tag, KeyComboTag
 } from '@blueprintjs/core';
 import { Omnibar } from '@blueprintjs/select';
-import { FRA_FACTS, TOUR_CHAPTERS } from './data.js';
+import { DATA_VERSION, FRA_FACTS, TOUR_CHAPTERS } from './data.js';
 import {
-  applyText, busOf, busOutLabel, clone, computePlans, fmt, freshScenario, liveRange, parsesClean, realNow, statusOf, taskOf, uniqFlights
-} from './logic.js';
+  applyText, busOf, busOutLabel, clone, computePlans, fmt, freshScenario, liveRange, parsesClean, realNow, statusOf, taskOf, uniqFlights, shortList } from './logic.js';
 import TasksPage from './pages/Tasks.jsx';
 import PlanPage from './pages/Plan.jsx';
 import LivePage from './pages/Live.jsx';
@@ -17,10 +16,10 @@ import Tour from './Tour.jsx';
 const STORE = 'crewBusCopilot.v1';
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } };
-const loadS = () => { try { const s = JSON.parse(lsGet(STORE)); if (s && s.tasks && s.buses) return s; } catch (e) { /* ignore */ } return null; };
+const loadS = () => { try { const s = JSON.parse(lsGet(STORE)); if (s && s.tasks && s.buses && s.version === DATA_VERSION) return s; } catch (e) { /* ignore */ } return null; };
 
 let alertToasterP = null, hudToasterP = null;
-const alertToaster = () => alertToasterP || (alertToasterP = OverlayToaster.createAsync({ position: 'top-right', maxToasts: 3, className: 'alert-toaster' }));
+const alertToaster = () => alertToasterP || (alertToasterP = OverlayToaster.createAsync({ position: 'bottom-right', maxToasts: 3, className: 'alert-toaster' }));
 const hudToaster = () => hudToasterP || (hudToasterP = OverlayToaster.createAsync({ position: 'bottom', maxToasts: 1, className: 'hud-toaster' }));
 
 export const AppCtx = createContext(null);
@@ -91,6 +90,7 @@ export default function App() {
   const quiet = useRef(true);
   const popupsRef = useRef(popups); popupsRef.current = popups;
   const seq = useRef(0);
+  const lastPop = useRef(0);
 
   const viewAlert = useCallback((o) => { if (o.sel) { setSel(o.sel); setTabState('live'); } }, []);
   const pushAlert = useCallback((o) => {
@@ -98,7 +98,9 @@ export default function App() {
     const a = { ...o, id: ++seq.current };
     setAlerts((l) => [a, ...l].slice(0, 60));
     setUnread((u) => u + 1);
-    if (popupsRef.current && !quiet.current) {
+    const now = Date.now();
+    if (popupsRef.current && !quiet.current && a.sev !== 'warning' && !/^(late|tight|na):today/.test(a.key || '') && (a.sev === 'info' || now - (lastPop.current || 0) > 2500)) {
+      lastPop.current = now;
       alertToaster().then((t) => t.show({
         intent: a.sev === 'critical' ? Intent.DANGER : a.sev === 'warning' ? Intent.WARNING : Intent.PRIMARY,
         icon: a.sev === 'info' ? 'info-sign' : 'warning-sign',
@@ -139,7 +141,7 @@ export default function App() {
     let raf, last = performance.now(), lastSet = 0;
     const loop = (now) => {
       const dt = Math.min(0.25, (now - last) / 1000); last = now;
-      if (now - lastSet > 33) {
+      if (now - lastSet > 40) {
         lastSet = now;
         setLive((l) => {
           if (l.mode === 'real') return { ...l, now: realNow() };
@@ -161,7 +163,7 @@ export default function App() {
     setS(r.S); setParseOut(r);
     if (r.okText) {
       setFlash((f) => ({ changed: r.changed, accepted: null, n: f.n + 1 }));
-      pushAlert({ sev: 'info', title: 'Plan updated: ' + r.okText, body: r.changed.length ? r.changed.length + ' crew task(s) moved to another bus: ' + r.changed.join(', ') + '.' : 'No crew task had to change bus.', sel: r.changed.length ? { kind: 'task', id: r.changed[0] } : null, clock: live.mode === 'real' ? null : liveT });
+      pushAlert({ sev: 'info', title: 'Plan updated: ' + r.okText, body: r.changed.length ? r.changed.length + ' crew tasks moved to a better bus: ' + shortList(r.changed) + '.' : 'No crew task had to change bus.', sel: r.changed.length ? { kind: 'task', id: r.changed[0] } : null, clock: live.mode === 'real' ? null : liveT });
     }
     return r;
   }, [S, pushAlert, live.mode, liveT]);

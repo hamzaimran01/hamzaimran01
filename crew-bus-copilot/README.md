@@ -51,7 +51,9 @@ Live map → **Airfield camera**. Fraport runs no official 24/7 public stream, s
 - **Design**: Blueprint components and palette, light and dark mode (it follows the system), and a bottom tab bar on phones. The motion includes view transitions, count-ups, a pop when you accept, buses gliding on the map, and pulsing live indicators. All of it turns off when the system "reduce motion" setting is on.
 
 ## Data
-- Crew tasks, buses and driving times are the **synthetic** sample from the brief (`data.js`).
+- Crew tasks, buses and driving times are **synthetic** (`src/data.js`): the brief's original 6 buses and 15 tasks, plus a seeded generator that adds buses up to a fleet of **40** and jobs up to **250** for the 06:00–07:20 rush (same data on every load; `FLEET_SIZE` sets the fleet). Piers C, D and E were added, with drive times derived from their map positions.
+- Generated jobs get a recorded "today's dispatcher" bus that imitates call-by-call dispatching (one of the three buses that can reach the pickup soonest), so the Results comparison stays fair. On this data, today's dispatching uses all 40 buses and has 10 crews late; the copilot gets all 250 on time with 22 buses and about 79% less empty driving.
+- At this scale the screens adapt: small numbered bus markers, parked buses in rings, name tags only for the selected bus, an "Active now / All buses" filter, the next 24 open jobs, pages of 10 buses on the Plan page, and urgent-only pop-up alerts.
 - The map follows Frankfurt Airport's real layout, but schematically: positions are approximate and not to scale, and it shows **planned** positions, not tracked vehicles.
 - The airport figures (61.6 M passengers, 440,853 movements and 2.1 M t cargo in 2024, 60+ gates in Terminal 1) come from Fraport's 2024 traffic figures and its terminal page. Links are in `data.js` and on the Results page.
 

@@ -76,6 +76,57 @@ var FRA_FACTS = {
 };
 
 /* Product tour video chapters (seconds into tour.mp4) */
-var TOUR_CHAPTERS = [{"t": 0.0, "title": "Intro"}, {"t": 7.4, "title": "The problem"}, {"t": 14.4, "title": "Tasks"}, {"t": 20.3, "title": "Disruptions"}, {"t": 27.5, "title": "Plan"}, {"t": 34.4, "title": "Accept"}, {"t": 40.9, "title": "Live map"}, {"t": 49.4, "title": "Drivers on duty"}, {"t": 55.3, "title": "Details"}, {"t": 61.7, "title": "Alerts"}, {"t": 72.7, "title": "Results"}, {"t": 79.6, "title": "Summary"}];
+var TOUR_CHAPTERS = [{"t": 0.0, "title": "Intro"}, {"t": 7.4, "title": "The problem"}, {"t": 14.4, "title": "Tasks"}, {"t": 20.3, "title": "Disruptions"}, {"t": 27.6, "title": "Plan"}, {"t": 34.5, "title": "Accept"}, {"t": 41.1, "title": "Live map"}, {"t": 49.6, "title": "Drivers on duty"}, {"t": 55.5, "title": "Details"}, {"t": 61.9, "title": "Alerts"}, {"t": 74.0, "title": "Results"}, {"t": 81.0, "title": "Summary"}];
 
-export { SAMPLE_TASKS, SAMPLE_BUSES, LOCATIONS, DRIVE_MINUTES, RULES, FRA_FACTS, TOUR_CHAPTERS };
+/* ---------- Scaled synthetic fleet: 80 buses, ~315 crew jobs (seeded, same every load) ----------
+   The first 6 buses and 15 tasks above are the original brief's sample; the rest are generated. */
+LOCATIONS.push('Pier C', 'Pier D', 'Pier E');
+DRIVE_MINUTES.push(
+  ['Crew Center', 'Pier C', 3], ['Crew Center', 'Pier D', 5], ['Crew Center', 'Pier E', 5],
+  ['Pier A', 'Pier C', 4], ['Pier A', 'Pier D', 6], ['Pier A', 'Pier E', 7],
+  ['Pier Z', 'Pier C', 6], ['Pier Z', 'Pier D', 8], ['Pier Z', 'Pier E', 9],
+  ['Pier B', 'Pier C', 3], ['Pier B', 'Pier D', 4], ['Pier B', 'Pier E', 5],
+  ['Apron V', 'Pier C', 7], ['Apron V', 'Pier D', 9], ['Apron V', 'Pier E', 10],
+  ['Apron F', 'Pier C', 3], ['Apron F', 'Pier D', 2], ['Apron F', 'Pier E', 2],
+  ['Bus Depot', 'Pier C', 5], ['Bus Depot', 'Pier D', 3], ['Bus Depot', 'Pier E', 2],
+  ['Pier C', 'Pier D', 2], ['Pier C', 'Pier E', 3], ['Pier D', 'Pier E', 2]
+);
+var DATA_VERSION = 'fleet40-v1';
+var FLEET_SIZE = 40;
+(function generate() {
+  var seed = 20261115;
+  function rnd() { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; var t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  function pick(a) { return a[Math.floor(rnd() * a.length)]; }
+  function hhmm(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+  // buses B07..B80
+  var starts = ['Bus Depot', 'Bus Depot', 'Bus Depot', 'Bus Depot', 'Crew Center', 'Crew Center', 'Crew Center', 'Pier A', 'Pier B', 'Pier C', 'Pier D', 'Pier E', 'Pier Z', 'Apron V', 'Apron F'];
+  for (var i = 7; i <= FLEET_SIZE; i++) {
+    var n = String(i).padStart(2, '0');
+    SAMPLE_BUSES.push({ id: 'B' + n, driver: 'D-' + n, start: pick(starts), shift: rnd() < 0.5 ? '04:00-12:30' : '05:30-14:00' });
+  }
+  // crew tasks T16..T315 between 06:00 and 07:35
+  var stands = ['Pier A', 'Pier A', 'Pier B', 'Pier B', 'Pier C', 'Pier C', 'Pier D', 'Pier E', 'Pier Z', 'Pier Z', 'Apron V', 'Apron F'];
+  var used = {}; SAMPLE_TASKS.forEach(function (t) { used[t.flight] = 1; });
+  function flight() { var f; do { f = 'LH' + (100 + Math.floor(rnd() * 1900)); } while (used[f]); used[f] = 1; return f; }
+  var id = 16;
+  function push(t) { t.id = 'T' + String(id++).padStart(2, '0'); t.dispatcherBus = null; SAMPLE_TASKS.push(t); }
+  while (SAMPLE_TASKS.length < 250) {
+    var ready = 360 + Math.floor(rnd() * 80);
+    var stand = pick(stands), fl = flight(), r = rnd();
+    if (r < 0.6) {
+      if (rnd() < 0.3) {
+        // a long-haul departure: cabin and cockpit as two tasks on one flight
+        push({ flight: fl, dir: 'DEP', crew: 'Cabin', pax: 10 + Math.floor(rnd() * 5), from: 'Crew Center', to: stand, ready: hhmm(ready), due: hhmm(ready + 20) });
+        push({ flight: fl, dir: 'DEP', crew: 'Cockpit', pax: 3, from: 'Crew Center', to: stand, ready: hhmm(ready + 5), due: hhmm(ready + 20) });
+      } else {
+        push({ flight: fl, dir: 'DEP', crew: 'Crew', pax: pick([4, 5, 6, 6, 6, 7, 8]), from: 'Crew Center', to: stand, ready: hhmm(ready), due: hhmm(ready + 15) });
+      }
+    } else {
+      var full = rnd() < 0.2;
+      push({ flight: fl, dir: 'ARR', crew: full ? 'Full crew' : 'Crew', pax: full ? 14 + Math.floor(rnd() * 4) : pick([4, 5, 6, 6, 7]), from: stand, to: 'Crew Center', ready: hhmm(ready), due: hhmm(ready + 10) });
+    }
+  }
+  while (SAMPLE_TASKS.length > 250) SAMPLE_TASKS.pop();
+})();
+
+export { SAMPLE_TASKS, SAMPLE_BUSES, LOCATIONS, DRIVE_MINUTES, RULES, FRA_FACTS, TOUR_CHAPTERS, DATA_VERSION, FLEET_SIZE };

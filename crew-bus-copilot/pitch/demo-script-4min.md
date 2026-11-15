@@ -14,16 +14,16 @@ Plain-language talk track. **SAY** is what you say, **DO** is what you click. Th
 **DO:** nothing yet. The Tasks list is on screen.
 
 ## 0:30–1:10 · Something goes wrong
-**SAY:** "This is the morning's work: every crew that needs a bus, and by when. Now something changes. Flight LH400 is 30 minutes late. Today, the dispatcher re-plans by phone."
+**SAY:** "This is one morning's work: 250 crews that need a bus, and 40 buses to do it. Now something changes. Flight LH400 is 30 minutes late. Today, the dispatcher re-plans by phone."
 
 **DO:** in **Report a disruption**, type `LH400 delayed 30 min` and press **Update plan**.
 
-**SAY:** "I just typed it in plain words. The copilot re-planned every bus in a second: five crews moved to a better bus."
+**SAY:** "I just typed it in plain words. The copilot re-planned all 40 buses in about a second and moved over a hundred crews to a better bus, which no one could do by phone."
 
 ## 1:10–1:50 · The copilot explains, the human decides
 **DO:** click the **Plan** tab. Point at the first **Why** line.
 
-**SAY:** "Every proposal says why. This bus is already at the Crew Center, so it drives no empty kilometres, and two crews share it."
+**SAY:** "Every proposal says why: which bus, how far it drives with nobody on board, and which crews share it." (Read the first Why line aloud.)
 
 **DO:** click **Accept** on the first one. Then click **Overrule** on another, show the list of buses, and click **Cancel**.
 
@@ -32,16 +32,16 @@ Plain-language talk track. **SAY** is what you say, **DO** is what you click. Th
 ## 1:50–3:00 · Watch the morning happen
 **DO:** click the **Live map** tab. Press **−5** until the clock shows **06:00**. Choose **60×** and press **Play**. Scroll a little so the bus rows and the open jobs are both on screen.
 
-**SAY:** "This is the dispatcher's board. At the top is every bus with its driver; at the bottom are the open jobs. Watch: as the morning runs, each job jumps from the open list onto its bus."
+**SAY:** "This is the dispatcher's board. On the map, all 40 buses. Below, every active bus with its driver, and at the bottom the open jobs. Watch: as the morning runs, each job jumps from the open list onto its bus."
 
-**DO:** after about 10 seconds, press **Pause**, scroll up, and click one bus on the map.
+**DO:** after about 10 seconds, press **Pause**, scroll up, and click one bus on the map. Optional: click **Today's dispatching** at the top right to show all 40 buses driving, then switch back to **Copilot plan**.
 
-**SAY:** "Click any bus and you see where it is, who it's carrying and what's next. If a crew is at risk of being late, an alert pops up here at the top right, before it's too late."
+**SAY:** "Click any bus and you see where it is, who it's carrying and what's next. If a crew is at risk of being late, an alert pops up here at the bottom right, before it's too late."
 
 ## 3:00–3:40 · The result
 **DO:** click the **Results** tab and point at the headline.
 
-**SAY:** "Same morning, two ways. With today's call-by-call dispatching, one crew is late. With the copilot, all 15 crews are on time, with about three quarters less empty driving and 4 buses instead of 6."
+**SAY:** "Same morning, two ways. With today's call-by-call dispatching, 15 crews are late and all 40 buses are on the road. With the copilot, all 250 crews are on time, with about 80% less empty driving, using 22 buses. The other 18 stay free as a reserve."
 
 ## 3:40–4:00 · Close
 **SAY:** "The copilot proposes, the dispatcher decides. We'd test it for 90 days next to the dispatchers, without changing their work, and decide on facts. It runs on test data only, and drivers appear as IDs, so there is no tracking of individual drivers."
